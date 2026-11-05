@@ -1,0 +1,50 @@
+name: Entrega verificável
+description: Definir resultado, aceite, validação e dependências antes de iniciar.
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexto e evidência
+      description: Descreva o estado observado, fontes e exemplos sanitizados; distinga hipótese de fato.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Resultado esperado
+      description: Qual comportamento ou decisão verificável estará disponível?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Escopo e limites
+      description: Inclui/exclui, contratos preservados e restrições de custo/dados.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critérios de aceite
+      description: Condições observáveis, incluindo erro ou limite relevante.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validação e evidências
+      description: Ambiente, procedimento, resultado esperado e evidência que acompanhará o PR.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependências e decisões
+      description: B bloqueada por A, motivo, quem resolve, próxima ação e condição de liberação. Relacionada não significa bloqueada.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: Pontos de partida
+      description: Arquivos, contratos, PRs e referências úteis; sem credenciais ou dados privados.
