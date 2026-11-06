@@ -1,21 +1,7 @@
-# Registro inicial de escopo — 05/11/2026
+# Escopo vigente
 
-## Direção informada
+Agente genérico de matemática com resultados numéricos/simbólicos e ferramentas verificáveis.
 
-- Especialização: cálculo.
-- Finalidade: Cálculos necessários a sistemas e processos de empresas.
-- Projeto independente na linha Sofiee.
-- Acompanhamento conjunto no chat agents, com os outros três agentes gerais e SlothEngineer.
+O escopo detalhado e seus limites estão em [REQUIREMENTS.md](REQUIREMENTS.md), a arquitetura em [ARCHITECTURE_PLAN.md](ARCHITECTURE_PLAN.md) e todas as issues/sprints em [DELIVERY_PLAN.md](DELIVERY_PLAN.md). As especialidades têm responsabilidades e critérios em [SPECIALIZATIONS.md](SPECIALIZATIONS.md).
 
-## Definições pendentes
-
-- Tipos de cálculo, precisão, unidades, entradas, saídas e critérios de correção.
-- Usuários e sistemas consumidores, casos de uso e situações de erro.
-- Contratos de entrada e saída e fronteiras com os outros agentes.
-- Estratégia de execução, modelos, ferramentas e avaliações.
-- Distribuição das interfaces MCP após a divisão do portfólio; nenhuma topologia adicional está aprovada neste bootstrap.
-- Objetivos finais, sprints, todas as issues e suas dependências, seguindo o padrão de entrega verificável.
-
-## Estado verificável
-
-Somente documentação e preparação do repositório. Não há código de produto, inferência, treinamento, integração MCP ou avaliações de qualidade concluídas. Não há rotina diária individual criada para este repositório.
+Este é um plano documentado; o repositório ainda precisa da implementação e de evidências. Não declarar especialista treinado ou operação pronta apenas por esta documentação.
