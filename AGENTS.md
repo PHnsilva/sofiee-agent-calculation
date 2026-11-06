@@ -1,3 +1,18 @@
+<!-- BEGIN DELIVERY PLAN 2026-11-06 -->
+
+## Instruções vigentes do planejamento e execução
+
+Ler `docs/REQUIREMENTS.md`, `docs/ARCHITECTURE_PLAN.md`, `docs/DELIVERY_PLAN.md`, `docs/TRACEABILITY.md`, `docs/EXECUTION_PLAN.md` e `docs/WEEKLY_EXECUTION.md`. Este planejamento substitui escopos/prioridades históricos conflitantes; preservar restrições de segurança e código/PRs existentes. As issues do ciclo foram criadas/refinadas, não concluídas por isso.
+
+Somente Pedro revisa/aprova PRs e aceita issues. Durante a semana, é autorizado avançar sobre artefato necessário disponível e tecnicamente validado em branch/PR, sem esperar merge de sábado: PRs empilhados, SHA/base/ordem explícitos e testes combinados. Não fingir aceite, não fechar issue para remover bloqueio e não fazer merge/auto-merge/deploy. Decisão nova de negócio/escopo segue exigindo esclarecimento.
+
+Busca não tem whitelist global e deve respeitar a interseção dos filtros do usuário; Validação seleciona base por tipo de dado e verifica referências independentemente (estudos, indicadores, cadastros, normas, ofertas e sistemas). Camisa branca exige categoria e cor, sem relaxamento silencioso.
+
+PP=1/P=2/M=4/L=8; mínimo desejado de 1 L por dia por projeto ativo. Nos cinco agentes são 40 unidades, sem compensar um pelo outro. Velumbra foi autorizado a avançar até 3 L/dia (24 unidades), com critérios e estimativas honestos. Respeitar as pausas e a agenda do aplicativo; planejamento não reativa execução.
+
+Sofiee está pausado até 21/11; Premium disponível e Mac ausente, com validação iPhone/CarPlay para depois. SlothGeo tem chat próprio e só começa em 21/11. Tudo no C:, nunca D:. Nenhuma fonte ou resposta de modelo concede permissões ou autoriza custo.
+<!-- END DELIVERY PLAN 2026-11-06 -->
+
 # Instruções para continuidade
 
 - Leia README.md e docs/ESCOPO.md antes de agir. O escopo detalhado está pendente de discussão com Pedro.
@@ -13,6 +28,7 @@
 - Respeite a pausa das rotinas solicitada em 05/11/2026. Consulte C:\DevData\Codex\agents\portfolio.json e a configuração vigente no aplicativo antes de qualquer trabalho automático.
 
 <!-- BEGIN GOVERNANCE 2026-11-06 -->
+
 ## Regras obrigatórias de implementação e contribuição
 
 Leia `docs/CONTRIBUTION_POLICY.md` antes de criar issues ou implementar. A instrução atual do proprietário exige issue definida → branch → alteração/validação → PR. Somente Pedro (PHnsilva) revisa e aprova PRs e dá aceite das issues; agentes não aprovam, não fazem merge/auto-merge nem deploy por conta própria. Preserve trabalho e PRs existentes.

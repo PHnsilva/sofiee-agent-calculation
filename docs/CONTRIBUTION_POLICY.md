@@ -22,11 +22,11 @@ Se B precisa de A, registrar **B bloqueada por A**, explicando o artefato consum
 ## Tamanho das issues e capacidade diária
 
 | Tamanho | Unidades relativas |
-| --- | ---: |
-| PP | 1 |
-| P | 2 |
-| M | 4 |
-| L | 8 |
+| ------- | -----------------: |
+| PP      |                  1 |
+| P       |                  2 |
+| M       |                  4 |
+| L       |                  8 |
 
 Cada tamanho dobra o anterior. Estimar conjuntamente volume de implementação, dificuldade, integrações, incerteza e validação; registrar uma justificativa. Esses valores não são horas nem garantia de tempo. Dividir uma entrega maior que L em partes com aceite próprio. Revisar estimativa com motivo e histórico; nunca inflar tamanhos nem fragmentar artificialmente para cumprir meta.
 
@@ -49,3 +49,9 @@ Validar comportamento e fronteiras reais com os comandos do projeto; testes de p
 O PR deve explicar problema/resultado, issue, tamanho, sprint, escopo, contratos/dependências, verificações com resultados e limites. PR empilhado declara a base e a ordem de revisão. Reconsultar HEAD, comentários e CI após alterações; resultado antigo não valida revisão nova. Preservar alterações locais e de outros autores; não resetar, limpar ou forçar push para facilitar o trabalho.
 
 Ao terminar, registrar branch/commit/PR, implementado, validações, limitações, bloqueios e próxima ação. Usar exclusivamente C: para trabalho, runtimes, downloads, caches e artefatos. Não usar D:, reservado à biblioteca de jogos. Não publicar dados pessoais, prompts privados, tokens, credenciais ou casos confidenciais. Serviços e chamadas com cobrança exigem autorização específica; não habilitar faturamento por inferência.
+
+## Execução semanal autorizada
+
+Ler [WEEKLY_EXECUTION.md](WEEKLY_EXECUTION.md). Pré-requisito tecnicamente disponível em commit/branch/PR pode ser usado provisoriamente por PR dependente/empilhado durante a semana, com base/ordem explícitas e validação combinada; não é necessário esperar aceite/merge de sábado para começar. Somente Pedro aprova e integra. Não tratar proposta sem artefato, teste ou contrato suficiente como pré-requisito pronto.
+
+Velumbra pode avançar até 3 L equivalentes/dia (24 unidades). A meta por projeto ativo permanece sem estimativas artificiais, e o diário distingue produzido, validado e aceito.
