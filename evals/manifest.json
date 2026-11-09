@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "project": "sofiee-agent-calculation",
+  "datasets": {
+    "development": {
+      "version": "1.0.0",
+      "path": "evals/development/cases.json",
+      "public": true,
+      "caseIds": [
+        "CALC-DEV-001",
+        "CALC-DEV-002",
+        "CALC-DEV-003"
+      ]
+    },
+    "regression": {
+      "version": "1.0.0",
+      "path": "evals/regression/cases.json",
+      "public": true,
+      "caseIds": [
+        "CALC-REG-001",
+        "CALC-REG-002",
+        "CALC-REG-003"
+      ]
+    }
+  },
+  "reserve": {
+    "policyVersion": "1.0.0",
+    "status": "defined_not_populated",
+    "custodian": "Pedro",
+    "location": "owner-controlled storage outside this public repository",
+    "publiclyIncluded": false,
+    "agentAccessible": false,
+    "caseIds": []
+  },
+  "requiredContractTools": [
+    "calculation.evaluate",
+    "calculation.symbolic",
+    "calculation.convertUnits"
+  ],
+  "evaluation": {
+    "scoreUnit": "per-case/per-capability",
+    "humanReviewRequired": true,
+    "criticalFailureInvalidatesCase": true,
+    "aggregateQualityClaimsAllowed": false,
+    "modelOutputsIncluded": false
+  }
+}

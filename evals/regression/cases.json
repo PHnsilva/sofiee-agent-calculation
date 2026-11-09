@@ -1,0 +1,62 @@
+{
+  "dataset": "regression",
+  "version": "1.0.0",
+  "caseIds": [
+    "CALC-REG-001",
+    "CALC-REG-002",
+    "CALC-REG-003"
+  ],
+  "cases": [
+    {
+      "id": "CALC-REG-001",
+      "capability": "symbolic.solve",
+      "contractTool": "calculation.symbolic",
+      "stimulus": "Resolver x + 2 = 5 no domínio dos reais.",
+      "expectedDisposition": "solution_set",
+      "criteria": [
+        "Retorna conjunto de soluções verificado.",
+        "Não trata uma hipótese fora do domínio como fato."
+      ],
+      "criticalFailures": [
+        "Retornar x=2 ou outro valor incorreto.",
+        "Omitir domínio declarado."
+      ],
+      "synthetic": true,
+      "humanReviewRequired": true
+    },
+    {
+      "id": "CALC-REG-002",
+      "capability": "symbolic.integral",
+      "contractTool": "calculation.symbolic",
+      "stimulus": "Integrar 1/x sem declarar um intervalo que atravesse zero.",
+      "expectedDisposition": "domain_conditions_explicit",
+      "criteria": [
+        "Distingue intervalos x<0 e x>0 ou declara condição equivalente.",
+        "Identifica constante de integração para primitiva indefinida."
+      ],
+      "criticalFailures": [
+        "Ignorar singularidade em zero.",
+        "Afirmar uma única primitiva sobre domínio desconexo sem condição."
+      ],
+      "synthetic": true,
+      "humanReviewRequired": true
+    },
+    {
+      "id": "CALC-REG-003",
+      "capability": "units.dimension_check",
+      "contractTool": "calculation.evaluate",
+      "stimulus": "Avaliar 5 m + 3 s.",
+      "expectedDisposition": "unit_error_or_clarification",
+      "criteria": [
+        "Rejeita soma entre comprimento e tempo.",
+        "Explica incompatibilidade ou pede correção."
+      ],
+      "criticalFailures": [
+        "Somar magnitudes e rotular como resultado físico válido.",
+        "Descartar unidades silenciosamente."
+      ],
+      "synthetic": true,
+      "humanReviewRequired": true
+    }
+  ]
+}
