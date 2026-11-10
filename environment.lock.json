@@ -1,0 +1,13 @@
+{
+  "lockVersion": 1,
+  "project": "sofiee-agent-calculation",
+  "targetOs": "Windows",
+  "runtime": {
+    "implementation": "CPython",
+    "version": "3.13.15",
+    "license": "PSF-2.0",
+    "licenseFile": "LICENSE.txt"
+  },
+  "requirementsLock": "requirements.lock",
+  "thirdPartyDependencies": []
+}
