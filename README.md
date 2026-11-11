@@ -61,3 +61,8 @@ Comandos locais:
     C:\SDKs\Python313\python.exe -m unittest discover -s tests -v
     C:\SDKs\Python313\python.exe scripts\validate_contracts.py
     C:\SDKs\Python313\python.exe scripts\check_environment.py
+
+
+## Servidor MCP local — issue #8
+
+O servidor interno expõe somente as ferramentas MCP versionadas em `contracts/v1/contracts.json`. Execute com CPython 3.13.15 e as dependências exatas de `requirements.lock`: `python -m agent_runtime.mcp_server`. O transporte local usa stdio; stdout é reservado ao protocolo. Não fornece shell, caminhos de arquivo ou acesso de rede arbitrários. Operações que exigem modelo ou fonte continuam sujeitas aos limites e estados retornados pelo runtime.
