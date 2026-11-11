@@ -47,3 +47,17 @@ Este é um dos quatro agentes gerais: [comunicação](https://github.com/PHnsilv
 O repositório é público para consulta e sugestões por issue ou PR. Mudanças posteriores ao bootstrap usam issue, branch e PR com evidências. Revisão e aceite são de Pedro.
 
 </details>
+
+## Runtime local proposto na issue #7
+
+O núcleo executa ferramentas determinísticas a partir do contrato v1. O CLI aceita um JSON {tool, input} para operações estruturadas ou {text} para texto em pt-BR/inglês. Formas explícitas de percentual e potência são estruturadas localmente sem inferência; outros pedidos podem usar o modelo Ollama local opt-in para propor parâmetros, que são validados antes da execução.
+
+A aritmética usa frações exatas ou decimais com limite de erro; conversões cobrem unidades canônicas de comprimento, massa, tempo e volume; o suporte simbólico é limitado a polinômios de uma variável e equações lineares. Operações fora desses limites retornam unsupported/insufficient_data. A medição local encontrou uma solicitação menos explícita que recebeu pedido de esclarecimento incompleto, portanto o modelo não é tratado como parser geral aprovado. Seleção, licença, medição e limites: [candidato local de modelo](docs/LOCAL_MODEL_SELECTION.md).
+
+O servidor MCP interno está separado na issue #8. Nenhum pacote de terceiros foi adicionado.
+
+Comandos locais:
+
+    C:\SDKs\Python313\python.exe -m unittest discover -s tests -v
+    C:\SDKs\Python313\python.exe scripts\validate_contracts.py
+    C:\SDKs\Python313\python.exe scripts\check_environment.py
