@@ -17,6 +17,7 @@ Agente genérico de matemática com resultados numéricos/simbólicos e ferramen
 Busca encontra fontes em qualquer lugar pertinente e preserva filtros do usuário; Validação escolhe a base adequada ao tipo de dado e verifica as referências independentemente. Não aplicar uma whitelist científica global ao Busca. O modelo pode ser compartilhado; as ferramentas e critérios de domínio são específicos.
 
 Trabalho exclusivamente no C:, sem serviços pagos obrigatórios. SlothGeo é separado e adiado para 21/11, não um sexto agente desta rotina.
+- Ambiente e versões locais: [inventário reproduzível](docs/LOCAL_ENVIRONMENT.md).
 <!-- END CURRENT PLAN 2026-11-06 -->
 
 <details>

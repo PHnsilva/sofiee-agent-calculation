@@ -1,0 +1,2 @@
+# S1 inventory baseline: no third-party runtime dependencies selected.
+# The Python standard library is the only dependency for current fixture tooling.
