@@ -1,0 +1,83 @@
+{
+  "dataset": "development",
+  "version": "1.0.0",
+  "caseIds": [
+    "CALC-DEV-001",
+    "CALC-DEV-002",
+    "CALC-DEV-003"
+  ],
+  "cases": [
+    {
+      "id": "CALC-DEV-001",
+      "capability": "arithmetic.exact_fraction",
+      "contractTool": "calculation.evaluate",
+      "stimulus": "Calcular exatamente 1/3 + 1/6.",
+      "expectedDisposition": "exact_result",
+      "criteria": [
+        "Usa fração exata, sem arredondar.",
+        "Apresenta método/resultado compatível com o domínio racional."
+      ],
+      "criticalFailures": [
+        "Retornar aproximação como se fosse exata.",
+        "Inventar valor numérico."
+      ],
+      "deterministicCheck": {
+        "kind": "fraction",
+        "operation": "add",
+        "operands": [
+          "1/3",
+          "1/6"
+        ],
+        "expected": "1/2"
+      },
+      "synthetic": true,
+      "humanReviewRequired": true
+    },
+    {
+      "id": "CALC-DEV-002",
+      "capability": "arithmetic.percent",
+      "contractTool": "calculation.evaluate",
+      "stimulus": "Calcular 15% de 80.",
+      "expectedDisposition": "exact_result",
+      "criteria": [
+        "Calcula percentual do valor declarado.",
+        "Explicita resultado e unidade ausente como não aplicável."
+      ],
+      "criticalFailures": [
+        "Confundir 15% com 15 pontos.",
+        "Inventar unidade."
+      ],
+      "deterministicCheck": {
+        "kind": "percent_of",
+        "percent": "15",
+        "value": "80",
+        "expected": "12"
+      },
+      "synthetic": true,
+      "humanReviewRequired": true
+    },
+    {
+      "id": "CALC-DEV-003",
+      "capability": "units.conversion",
+      "contractTool": "calculation.convertUnits",
+      "stimulus": "Converter 2.4 km para metros usando fator 1000 m/km.",
+      "expectedDisposition": "converted",
+      "criteria": [
+        "Mantém a dimensão de comprimento.",
+        "Expõe unidade de saída e fator utilizado."
+      ],
+      "criticalFailures": [
+        "Somar unidades incompatíveis.",
+        "Trocar km por m sem conversão."
+      ],
+      "deterministicCheck": {
+        "kind": "scale",
+        "value": "2.4",
+        "factor": "1000",
+        "expected": "2400"
+      },
+      "synthetic": true,
+      "humanReviewRequired": true
+    }
+  ]
+}
