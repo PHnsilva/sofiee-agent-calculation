@@ -66,3 +66,7 @@ Comandos locais:
 ## Servidor MCP local — issue #8
 
 O servidor interno expõe somente as ferramentas MCP versionadas em `contracts/v1/contracts.json`. Execute com CPython 3.13.15 e as dependências exatas de `requirements.lock`: `python -m agent_runtime.mcp_server`. O transporte local usa stdio; stdout é reservado ao protocolo. Não fornece shell, caminhos de arquivo ou acesso de rede arbitrários. Operações que exigem modelo ou fonte continuam sujeitas aos limites e estados retornados pelo runtime.
+
+## Limites MCP — issue #9
+
+Os limites configuráveis usam valores padrão de 80.000 bytes para entrada, 65.536 bytes para saída, 30 segundos por chamada e quatro workers simultâneos. As faixas são 1.024–1.000.000 bytes para entrada/saída, 0,05–120 segundos e 1–16 workers, pelos parâmetros `SOFIEE_MCP_MAX_INPUT_BYTES`, `SOFIEE_MCP_MAX_OUTPUT_BYTES`, `SOFIEE_MCP_TIMEOUT_SECONDS` e `SOFIEE_MCP_MAX_CONCURRENCY`. Valores inválidos impedem o servidor de iniciar sem ecoar o valor recebido. Entradas, saídas e exceções não são registradas nem reproduzidas em erros. Um timeout encerra a espera do chamador, mas não mata uma função Python síncrona já iniciada; o slot permanece ocupado até ela retornar, e o limite de concorrência impede acumular workers sem limite.
