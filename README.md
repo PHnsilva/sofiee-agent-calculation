@@ -13,6 +13,7 @@ Agente genérico de matemática com resultados numéricos/simbólicos e ferramen
 - [Execução semanal por dependências e PRs encadeados](docs/WEEKLY_EXECUTION.md)
 - [Retomada diária](docs/EXECUTION_PLAN.md)
 - [Contribuição](docs/CONTRIBUTION_POLICY.md)
+- [Contratos MCP v1 — proposta da issue #5](contracts/v1/README.md)
 
 Busca encontra fontes em qualquer lugar pertinente e preserva filtros do usuário; Validação escolhe a base adequada ao tipo de dado e verifica as referências independentemente. Não aplicar uma whitelist científica global ao Busca. O modelo pode ser compartilhado; as ferramentas e critérios de domínio são específicos.
 
