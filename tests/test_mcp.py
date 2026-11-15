@@ -9,6 +9,7 @@ from pathlib import Path
 
 from mcp import Client
 from mcp.client.stdio import StdioServerParameters
+from agent_runtime.contracts import CONTRACT
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVER = StdioServerParameters(
@@ -18,9 +19,9 @@ SERVER = StdioServerParameters(
 )
 EXPECTED_NAMES = {'calculation.evaluate', 'calculation.convertUnits', 'calculation.symbolic'}
 TEST_TOOL = "calculation.evaluate"
-PAYLOAD = {'contractVersion': '1.0.0',
- 'operation': 'divide',
- 'operands': ['1', '3'],
+PAYLOAD = {'contractVersion': CONTRACT['contractVersion'],
+ 'operation': 'percentage_change',
+ 'operands': ['100', '120'],
  'domain': 'real',
  'precision': {'mode': 'decimal', 'decimalPlaces': 8}}
 
@@ -43,9 +44,10 @@ class McpTransportTests(unittest.TestCase):
             'https://sofiee-agent-calculation.local/contracts/v1/evaluate.input.schema.json',
         )
         self.assertIsInstance(result.structured_content, dict)
-        self.assertEqual(result.structured_content.get("contractVersion"), "1.0.0")
+        self.assertEqual(result.structured_content.get("contractVersion"), CONTRACT['contractVersion'])
         self.assertFalse(result.is_error)
-        self.assertEqual(result.structured_content.get("contractVersion"), "1.0.0")
+        self.assertEqual(result.structured_content.get("operation"), "percentage_change")
+        self.assertEqual(result.structured_content.get("value"), "20")
 
 
 if __name__ == "__main__":

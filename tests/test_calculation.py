@@ -20,7 +20,7 @@ class FakeModel:
 class CalculationTests(unittest.TestCase):
     def test_exact_arithmetic_uses_deterministic_tool(self):
         request = {
-            "contractVersion": "1.0.0",
+            "contractVersion": "1.1.0",
             "operation": "divide",
             "operands": ["1", "3"],
             "domain": "real",
@@ -30,9 +30,21 @@ class CalculationTests(unittest.TestCase):
         self.assertEqual(result["status"], "exact")
         self.assertEqual(result["value"], "1/3")
 
+    def test_fraction_addition_is_exact(self):
+        request = {
+            "contractVersion": "1.1.0",
+            "operation": "add",
+            "operands": ["1/3", "1/6"],
+            "domain": "real",
+            "precision": {"mode": "exact", "decimalPlaces": 8},
+        }
+        result = execute("calculation.evaluate", request)
+        self.assertEqual(result["status"], "exact")
+        self.assertEqual(result["value"], "1/2")
+
     def test_decimal_division_reports_approximation_and_error(self):
         request = {
-            "contractVersion": "1.0.0",
+            "contractVersion": "1.1.0",
             "operation": "divide",
             "operands": ["1", "3"],
             "domain": "real",
@@ -45,7 +57,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_exact_root(self):
         request = {
-            "contractVersion": "1.0.0",
+            "contractVersion": "1.1.0",
             "operation": "root",
             "operands": ["27", "3"],
             "domain": "real",
@@ -57,7 +69,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_percentage_and_zero_division(self):
         percentage = {
-            "contractVersion": "1.0.0",
+            "contractVersion": "1.1.0",
             "operation": "percentage",
             "operands": ["15", "80"],
             "domain": "real",
@@ -67,9 +79,56 @@ class CalculationTests(unittest.TestCase):
         divide = dict(percentage, operation="divide", operands=["1", "0"])
         self.assertEqual(execute("calculation.evaluate", divide)["status"], "ambiguous")
 
+    def test_percentage_change_has_explicit_baseline_and_zero_rule(self):
+        change = {
+            "contractVersion": "1.1.0",
+            "operation": "percentage_change",
+            "operands": ["100", "120"],
+            "domain": "real",
+            "precision": {"mode": "exact", "decimalPlaces": 8},
+        }
+        self.assertEqual(execute("calculation.evaluate", change)["value"], "20")
+        decrease = dict(change, operands=["120", "90"])
+        self.assertEqual(execute("calculation.evaluate", decrease)["value"], "-25")
+        zero_base = dict(change, operands=["0", "120"])
+        result = execute("calculation.evaluate", zero_base)
+        self.assertEqual(result["status"], "ambiguous")
+        self.assertEqual(result["value"], "")
+        self.assertIn("old value is zero", result["method"])
+
+    def test_decimal_comma_is_explicit_and_mixed_separators_are_rejected(self):
+        request = {
+            "contractVersion": "1.1.0",
+            "operation": "add",
+            "operands": ["1,5", "2.25"],
+            "domain": "real",
+            "precision": {"mode": "exact", "decimalPlaces": 8},
+        }
+        result = execute("calculation.evaluate", request)
+        self.assertEqual(result["status"], "exact")
+        self.assertEqual(result["value"], "15/4")
+        mixed = dict(request, operands=["1,234.5", "1"])
+        self.assertEqual(execute("calculation.evaluate", mixed)["code"], "invalid_request")
+
+    def test_decimal_rounding_is_reported_as_approximate_half_even(self):
+        request = {
+            "contractVersion": "1.1.0",
+            "operation": "divide",
+            "operands": ["5", "2"],
+            "domain": "real",
+            "precision": {"mode": "decimal", "decimalPlaces": 0},
+        }
+        result = execute("calculation.evaluate", request)
+        self.assertEqual(result["status"], "approximate")
+        self.assertEqual(result["value"], "2")
+        self.assertIn("half-even", result["method"])
+        self.assertNotEqual(result["errorBound"], "0")
+
     def test_unit_conversion_is_dimension_checked(self):
         request = TOOLS["calculation.convertUnits"]["examples"]["validInput"]
         self.assertEqual(execute("calculation.convertUnits", request)["convertedAmount"], "1500")
+        decimal_comma = dict(request, amount="1,5")
+        self.assertEqual(execute("calculation.convertUnits", decimal_comma)["convertedAmount"], "1500")
         incompatible = dict(request, sourceUnit="kg", targetUnit="m")
         self.assertEqual(execute("calculation.convertUnits", incompatible)["status"], "unsupported")
         oversized = dict(request, amount="9" * 128, sourceUnit="mi", targetUnit="mm", decimalPlaces=0)
@@ -79,7 +138,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_symbolic_polynomial_derivative_and_integral(self):
         request = {
-            "contractVersion": "1.0.0",
+            "contractVersion": "1.1.0",
             "operation": "derivative",
             "expression": "x^2 + 3*x + 1",
             "variable": "x",
@@ -93,7 +152,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_linear_solve_substitute_and_missing_limit_point(self):
         request = {
-            "contractVersion": "1.0.0",
+            "contractVersion": "1.1.0",
             "operation": "solve",
             "expression": "2*x - 4",
             "variable": "x",
@@ -109,7 +168,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_unsafe_or_unsupported_symbolic_expression_fails_closed(self):
         request = {
-            "contractVersion": "1.0.0",
+            "contractVersion": "1.1.0",
             "operation": "simplify",
             "expression": "__import__('os').system('whoami')",
             "variable": "x",
@@ -121,7 +180,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_oversized_polynomial_coefficient_is_rejected(self):
         request = {
-            "contractVersion": "1.0.0",
+            "contractVersion": "1.1.0",
             "operation": "simplify",
             "expression": ("9" * 700) + "*x",
             "variable": "x",
@@ -140,6 +199,16 @@ class CalculationTests(unittest.TestCase):
         self.assertEqual(result["status"], "executed")
         self.assertEqual(result["result"]["value"], "12")
 
+    def test_explicit_percentage_change_in_both_locales_bypasses_model(self):
+        fake = FakeModel({})
+        for text in ("Variação percentual de 100 para 120", "Percentage change from 100 to 120"):
+            with self.subTest(text=text):
+                result = execute_text_request(text, model=fake)
+                self.assertEqual(result["status"], "executed")
+                self.assertEqual(result["input"]["operation"], "percentage_change")
+                self.assertEqual(result["result"]["value"], "20")
+        self.assertEqual(fake.calls, 0)
+
     def test_explicit_power_request_bypasses_model_and_uses_deterministic_math(self):
         fake = FakeModel({})
         result = execute_text_request("Calcule 2 elevado a 5.", model=fake)
@@ -153,7 +222,7 @@ class CalculationTests(unittest.TestCase):
                 "status": "ready",
                 "tool": "calculation.evaluate",
                 "input": {
-                    "contractVersion": "1.0.0",
+                    "contractVersion": "1.1.0",
                     "operation": "power",
                     "operands": ["2", "5"],
                     "domain": "real",
@@ -172,7 +241,7 @@ class CalculationTests(unittest.TestCase):
                 "status": "ready",
                 "tool": "calculation.evaluate",
                 "input": {
-                    "contractVersion": "1.0.0",
+                    "contractVersion": "1.1.0",
                     "operation": "multiply",
                     "operands": ["2", "3"],
                     "domain": "math",

@@ -63,7 +63,7 @@ def matches(value, schema):
 
 def main():
     contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
-    assert contract["contractVersion"] == "1.0.0"
+    assert contract["contractVersion"] == "1.1.0"
     assert contract["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     error_schema = contract["errorSchema"]
     assert error_schema["$schema"] == contract["$schema"]
