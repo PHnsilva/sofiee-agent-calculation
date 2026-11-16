@@ -20,7 +20,7 @@ class FakeModel:
 class CalculationTests(unittest.TestCase):
     def test_exact_arithmetic_uses_deterministic_tool(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "divide",
             "operands": ["1", "3"],
             "domain": "real",
@@ -32,7 +32,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_fraction_addition_is_exact(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "add",
             "operands": ["1/3", "1/6"],
             "domain": "real",
@@ -44,7 +44,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_decimal_division_reports_approximation_and_error(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "divide",
             "operands": ["1", "3"],
             "domain": "real",
@@ -57,7 +57,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_exact_root(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "root",
             "operands": ["27", "3"],
             "domain": "real",
@@ -69,7 +69,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_percentage_and_zero_division(self):
         percentage = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "percentage",
             "operands": ["15", "80"],
             "domain": "real",
@@ -81,7 +81,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_percentage_change_has_explicit_baseline_and_zero_rule(self):
         change = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "percentage_change",
             "operands": ["100", "120"],
             "domain": "real",
@@ -98,7 +98,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_decimal_comma_is_explicit_and_mixed_separators_are_rejected(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "add",
             "operands": ["1,5", "2.25"],
             "domain": "real",
@@ -112,7 +112,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_decimal_rounding_is_reported_as_approximate_half_even(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "divide",
             "operands": ["5", "2"],
             "domain": "real",
@@ -123,6 +123,74 @@ class CalculationTests(unittest.TestCase):
         self.assertEqual(result["value"], "2")
         self.assertIn("half-even", result["method"])
         self.assertNotEqual(result["errorBound"], "0")
+
+    def _statistics_request(self, operation="mean", values=None, **extra):
+        request = {
+            "contractVersion": "1.2.0",
+            "operation": operation,
+            "values": ["1", "2", "3"] if values is None else values,
+            "precision": {"mode": "exact", "decimalPlaces": 8},
+        }
+        request.update(extra)
+        return request
+
+    def test_descriptive_statistics_mean_weighted_mean_median_and_variance(self):
+        self.assertEqual(execute("calculation.statistics", self._statistics_request())["value"], "2")
+        weighted = self._statistics_request("weighted_mean", ["1", "3"], weights=["1", "3"])
+        self.assertEqual(execute("calculation.statistics", weighted)["value"], "5/2")
+        median = self._statistics_request("median", ["1", "2", "3", "4"])
+        self.assertEqual(execute("calculation.statistics", median)["value"], "5/2")
+        population = self._statistics_request("variance_population")
+        sample = self._statistics_request("variance_sample")
+        self.assertEqual(execute("calculation.statistics", population)["value"], "2/3")
+        self.assertEqual(execute("calculation.statistics", sample)["value"], "1")
+
+    def test_statistics_mode_returns_all_ties_and_all_distinct_values(self):
+        tied = self._statistics_request("mode", ["2", "1", "2", "1", "3"])
+        self.assertEqual(execute("calculation.statistics", tied)["modes"], ["1", "2"])
+        distinct = self._statistics_request("mode", ["3", "1", "2"])
+        result = execute("calculation.statistics", distinct)
+        self.assertEqual(result["modes"], ["1", "2", "3"])
+        self.assertIn("all are modes", result["assumptions"][0])
+
+    def test_statistics_empty_invalid_weights_and_sample_limits_fail_explicitly(self):
+        empty = self._statistics_request(values=[])
+        self.assertEqual(execute("calculation.statistics", empty)["status"], "insufficient_data")
+        empty_mode = self._statistics_request("mode", [])
+        self.assertEqual(execute("calculation.statistics", empty_mode)["status"], "insufficient_data")
+        empty_variance = self._statistics_request("variance_population", [], unit="kg")
+        empty_result = execute("calculation.statistics", empty_variance)
+        self.assertEqual(empty_result["status"], "insufficient_data")
+        self.assertEqual(empty_result["unit"], "(kg)²")
+        single_sample = self._statistics_request("variance_sample", ["7"])
+        self.assertEqual(execute("calculation.statistics", single_sample)["status"], "insufficient_data")
+        single_population = self._statistics_request("variance_population", ["7"])
+        self.assertEqual(execute("calculation.statistics", single_population)["value"], "0")
+        missing_weights = self._statistics_request("weighted_mean", ["1", "2"])
+        self.assertEqual(execute("calculation.statistics", missing_weights)["status"], "insufficient_data")
+        mismatched_weights = self._statistics_request("weighted_mean", ["1", "2"], weights=["1"])
+        self.assertEqual(execute("calculation.statistics", mismatched_weights)["code"], "invalid_request")
+        zero_weights = self._statistics_request("weighted_mean", ["1", "2"], weights=["0", "0"])
+        self.assertEqual(execute("calculation.statistics", zero_weights)["code"], "invalid_request")
+        negative_weight = self._statistics_request("weighted_mean", ["1", "2"], weights=["-1", "2"])
+        self.assertEqual(execute("calculation.statistics", negative_weight)["code"], "invalid_request")
+        invalid_value = self._statistics_request(values=["NaN"])
+        self.assertEqual(execute("calculation.statistics", invalid_value)["code"], "invalid_request")
+        oversized = self._statistics_request(values=["1"] * 1001)
+        self.assertEqual(execute("calculation.statistics", oversized)["code"], "invalid_request")
+
+    def test_statistics_preserve_units_and_report_decimal_error(self):
+        mean = self._statistics_request(values=["1", "2"], unit="kg")
+        approximate = dict(mean, precision={"mode": "decimal", "decimalPlaces": 0})
+        result = execute("calculation.statistics", approximate)
+        self.assertEqual(result["status"], "approximate")
+        self.assertEqual(result["value"], "2")
+        self.assertEqual(result["unit"], "kg")
+        self.assertEqual(result["errorBound"], "≤0.5")
+        variance = self._statistics_request("variance_population", ["1", "3"], unit="kg")
+        result = execute("calculation.statistics", variance)
+        self.assertEqual(result["unit"], "(kg)²")
+        self.assertIn("divided by n.", result["method"])
 
     def test_unit_conversion_is_dimension_checked(self):
         request = TOOLS["calculation.convertUnits"]["examples"]["validInput"]
@@ -138,7 +206,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_symbolic_polynomial_derivative_and_integral(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "derivative",
             "expression": "x^2 + 3*x + 1",
             "variable": "x",
@@ -152,7 +220,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_linear_solve_substitute_and_missing_limit_point(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "solve",
             "expression": "2*x - 4",
             "variable": "x",
@@ -168,7 +236,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_unsafe_or_unsupported_symbolic_expression_fails_closed(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "simplify",
             "expression": "__import__('os').system('whoami')",
             "variable": "x",
@@ -180,7 +248,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_oversized_polynomial_coefficient_is_rejected(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "simplify",
             "expression": ("9" * 700) + "*x",
             "variable": "x",
@@ -222,7 +290,7 @@ class CalculationTests(unittest.TestCase):
                 "status": "ready",
                 "tool": "calculation.evaluate",
                 "input": {
-                    "contractVersion": "1.1.0",
+                    "contractVersion": "1.2.0",
                     "operation": "power",
                     "operands": ["2", "5"],
                     "domain": "real",
@@ -235,13 +303,34 @@ class CalculationTests(unittest.TestCase):
         self.assertEqual(result["status"], "executed")
         self.assertEqual(result["result"]["value"], "32")
 
+    def test_local_parser_can_select_the_versioned_statistics_tool(self):
+        fake = FakeModel(
+            {
+                "status": "ready",
+                "tool": "calculation.statistics",
+                "input": {
+                    "contractVersion": "1.2.0",
+                    "operation": "weighted_mean",
+                    "values": ["10", "20"],
+                    "weights": ["1", "3"],
+                    "unit": "kg",
+                    "precision": {"mode": "exact", "decimalPlaces": 8},
+                },
+            }
+        )
+        result = execute_text_request("Calcule a média ponderada de 10 kg e 20 kg.", model=fake)
+        self.assertEqual(fake.calls, 1)
+        self.assertEqual(result["status"], "executed")
+        self.assertEqual(result["input"]["operation"], "weighted_mean")
+        self.assertEqual(result["result"]["value"], "35/2")
+
     def test_invalid_model_proposal_is_rejected_before_execution(self):
         fake = FakeModel(
             {
                 "status": "ready",
                 "tool": "calculation.evaluate",
                 "input": {
-                    "contractVersion": "1.1.0",
+                    "contractVersion": "1.2.0",
                     "operation": "multiply",
                     "operands": ["2", "3"],
                     "domain": "math",

@@ -48,13 +48,13 @@ O repositório é público para consulta e sugestões por issue ou PR. Mudanças
 
 </details>
 
-## Runtime local proposto na issue #7
+## Runtime local
 
-O núcleo executa ferramentas determinísticas a partir do contrato v1. O CLI aceita um JSON {tool, input} para operações estruturadas ou {text} para texto em pt-BR/inglês. Formas explícitas de percentual e potência são estruturadas localmente sem inferência; outros pedidos podem usar o modelo Ollama local opt-in para propor parâmetros, que são validados antes da execução.
+O núcleo executa ferramentas determinísticas a partir do contrato v1.2.0. O CLI aceita um JSON {tool, input} para operações estruturadas ou {text} para texto em pt-BR/inglês. Formas explícitas de percentual e potência são estruturadas localmente sem inferência; outros pedidos podem usar o modelo Ollama local opt-in para propor parâmetros, que são validados antes da execução.
 
-A aritmética usa frações exatas ou decimais com limite de erro; conversões cobrem unidades canônicas de comprimento, massa, tempo e volume; o suporte simbólico é limitado a polinômios de uma variável e equações lineares. Operações fora desses limites retornam unsupported/insufficient_data. A medição local encontrou uma solicitação menos explícita que recebeu pedido de esclarecimento incompleto, portanto o modelo não é tratado como parser geral aprovado. Seleção, licença, medição e limites: [candidato local de modelo](docs/LOCAL_MODEL_SELECTION.md).
+A aritmética usa frações exatas ou decimais com limite de erro; conversões cobrem unidades canônicas de comprimento, massa, tempo e volume; o suporte simbólico é limitado a polinômios de uma variável e equações lineares. `calculation.statistics` oferece média simples/ponderada, mediana, moda e variância amostral/populacional, com limites e convenções descritos em [contratos MCP](contracts/v1/README.md). Operações fora dos limites retornam estado explícito, sem inventar resultado. O modelo não é tratado como parser geral aprovado. Seleção, licença, medição e limites: [candidato local de modelo](docs/LOCAL_MODEL_SELECTION.md).
 
-O servidor MCP interno está separado na issue #8. Nenhum pacote de terceiros foi adicionado.
+O servidor MCP stdio publica as ferramentas do contrato; não habilita shell nem acesso de rede arbitrários. Nenhum pacote de terceiros foi adicionado.
 
 Comandos locais:
 
@@ -66,6 +66,10 @@ Comandos locais:
 ## Servidor MCP local — issue #8
 
 O servidor interno expõe somente as ferramentas MCP versionadas em `contracts/v1/contracts.json`. Execute com CPython 3.13.15 e as dependências exatas de `requirements.lock`: `python -m agent_runtime.mcp_server`. O transporte local usa stdio; stdout é reservado ao protocolo. Não fornece shell, caminhos de arquivo ou acesso de rede arbitrários. Operações que exigem modelo ou fonte continuam sujeitas aos limites e estados retornados pelo runtime.
+
+## Estatística descritiva — `calculation.statistics`
+
+A ferramenta recebe `values` como strings numéricas e `operation` como `mean`, `weighted_mean`, `median`, `mode`, `variance_population` ou `variance_sample`. A média ponderada exige pesos correspondentes, não negativos e com soma positiva. A moda retorna todas as observações empatadas na maior frequência; conjuntos sem repetição retornam todos os valores conforme a convenção declarada no contrato. Variância amostral requer ao menos duas observações; variância populacional divide por `n`, e a amostral por `n−1`.
 
 ## Limites MCP — issue #9
 
