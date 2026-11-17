@@ -23,14 +23,16 @@ def matches(value, schema):
         properties = schema.get("properties", {})
         if schema.get("additionalProperties") is False and set(value) - set(properties):
             return False
-        return all(matches(child, properties[key]) for key, child in value.items() if key in properties)
-    if kind == "array":
+        if not all(matches(child, properties[key]) for key, child in value.items() if key in properties):
+            return False
+    elif kind == "array":
         if not isinstance(value, list):
             return False
         if len(value) < schema.get("minItems", 0) or len(value) > schema.get("maxItems", float("inf")):
             return False
-        return all(matches(item, schema["items"]) for item in value)
-    if kind == "string":
+        if "items" in schema and not all(matches(item, schema["items"]) for item in value):
+            return False
+    elif kind == "string":
         if not isinstance(value, str):
             return False
         if len(value) < schema.get("minLength", 0) or len(value) > schema.get("maxLength", float("inf")):
@@ -51,6 +53,12 @@ def matches(value, schema):
             return False
     elif kind is not None:
         raise ValueError(f"Unsupported schema type: {kind}")
+    if any(not matches(value, item) for item in schema.get("allOf", [])):
+        return False
+    if "if" in schema:
+        branch = schema.get("then") if matches(value, schema["if"]) else schema.get("else")
+        if branch is not None and not matches(value, branch):
+            return False
     if "const" in schema and value != schema["const"]:
         return False
     if "enum" in schema and value not in schema["enum"]:
@@ -63,7 +71,7 @@ def matches(value, schema):
 
 def main():
     contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
-    assert contract["contractVersion"] == "1.2.0"
+    assert contract["contractVersion"] == "1.3.0"
     assert contract["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     error_schema = contract["errorSchema"]
     assert error_schema["$schema"] == contract["$schema"]

@@ -4,7 +4,7 @@ import unittest
 
 from agent_runtime.calculation import execute, execute_text_request, parse_text_request
 from agent_runtime.local_model import LocalModel, ModelCallError
-from agent_runtime.contracts import TOOLS
+from agent_runtime.contracts import ContractViolation, TOOLS, validate_input
 
 
 class FakeModel:
@@ -20,7 +20,7 @@ class FakeModel:
 class CalculationTests(unittest.TestCase):
     def test_exact_arithmetic_uses_deterministic_tool(self):
         request = {
-            "contractVersion": "1.2.0",
+            "contractVersion": "1.3.0",
             "operation": "divide",
             "operands": ["1", "3"],
             "domain": "real",
@@ -32,7 +32,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_fraction_addition_is_exact(self):
         request = {
-            "contractVersion": "1.2.0",
+            "contractVersion": "1.3.0",
             "operation": "add",
             "operands": ["1/3", "1/6"],
             "domain": "real",
@@ -44,7 +44,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_decimal_division_reports_approximation_and_error(self):
         request = {
-            "contractVersion": "1.2.0",
+            "contractVersion": "1.3.0",
             "operation": "divide",
             "operands": ["1", "3"],
             "domain": "real",
@@ -57,7 +57,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_exact_root(self):
         request = {
-            "contractVersion": "1.2.0",
+            "contractVersion": "1.3.0",
             "operation": "root",
             "operands": ["27", "3"],
             "domain": "real",
@@ -69,7 +69,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_percentage_and_zero_division(self):
         percentage = {
-            "contractVersion": "1.2.0",
+            "contractVersion": "1.3.0",
             "operation": "percentage",
             "operands": ["15", "80"],
             "domain": "real",
@@ -81,7 +81,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_percentage_change_has_explicit_baseline_and_zero_rule(self):
         change = {
-            "contractVersion": "1.2.0",
+            "contractVersion": "1.3.0",
             "operation": "percentage_change",
             "operands": ["100", "120"],
             "domain": "real",
@@ -98,7 +98,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_decimal_comma_is_explicit_and_mixed_separators_are_rejected(self):
         request = {
-            "contractVersion": "1.2.0",
+            "contractVersion": "1.3.0",
             "operation": "add",
             "operands": ["1,5", "2.25"],
             "domain": "real",
@@ -112,7 +112,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_decimal_rounding_is_reported_as_approximate_half_even(self):
         request = {
-            "contractVersion": "1.2.0",
+            "contractVersion": "1.3.0",
             "operation": "divide",
             "operands": ["5", "2"],
             "domain": "real",
@@ -126,7 +126,7 @@ class CalculationTests(unittest.TestCase):
 
     def _statistics_request(self, operation="mean", values=None, **extra):
         request = {
-            "contractVersion": "1.2.0",
+            "contractVersion": "1.3.0",
             "operation": operation,
             "values": ["1", "2", "3"] if values is None else values,
             "precision": {"mode": "exact", "decimalPlaces": 8},
@@ -192,6 +192,166 @@ class CalculationTests(unittest.TestCase):
         self.assertEqual(result["unit"], "(kg)²")
         self.assertIn("divided by n.", result["method"])
 
+    def test_combinatorics_obeys_order_repetition_and_multiset_counts(self):
+        version = "1.3.0"
+        permutation = execute(
+            "calculation.combinatorics",
+            {"contractVersion": version, "operation": "permutation", "itemCount": 5},
+        )
+        self.assertEqual(permutation["value"], "120")
+        multiset = execute(
+            "calculation.combinatorics",
+            {"contractVersion": version, "operation": "permutation", "itemCount": 5, "multiplicities": [2, 2, 1]},
+        )
+        self.assertEqual(multiset["value"], "30")
+
+        arrangement = {"contractVersion": version, "operation": "arrangement", "itemCount": 5, "selectionCount": 3}
+        self.assertEqual(execute("calculation.combinatorics", dict(arrangement, allowRepetition=False))["value"], "60")
+        self.assertEqual(execute("calculation.combinatorics", dict(arrangement, allowRepetition=True))["value"], "125")
+
+        combination = {"contractVersion": version, "operation": "combination", "itemCount": 5, "selectionCount": 3}
+        self.assertEqual(execute("calculation.combinatorics", dict(combination, allowRepetition=False))["value"], "10")
+        self.assertEqual(execute("calculation.combinatorics", dict(combination, allowRepetition=True))["value"], "35")
+
+    def test_combinatorics_handles_empty_impossible_and_bounded_results(self):
+        version = "1.3.0"
+        empty_permutation = execute(
+            "calculation.combinatorics",
+            {"contractVersion": version, "operation": "permutation", "itemCount": 0},
+        )
+        self.assertEqual(empty_permutation["value"], "1")
+        impossible = execute(
+            "calculation.combinatorics",
+            {"contractVersion": version, "operation": "arrangement", "itemCount": 3, "selectionCount": 4, "allowRepetition": False},
+        )
+        self.assertEqual(impossible["value"], "0")
+        empty_selection = execute(
+            "calculation.combinatorics",
+            {"contractVersion": version, "operation": "combination", "itemCount": 0, "selectionCount": 0, "allowRepetition": True},
+        )
+        self.assertEqual(empty_selection["value"], "1")
+        oversized = execute(
+            "calculation.combinatorics",
+            {"contractVersion": version, "operation": "arrangement", "itemCount": 1000, "selectionCount": 1000, "allowRepetition": True},
+        )
+        self.assertEqual(oversized["status"], "unsupported")
+        self.assertEqual(oversized["value"], "")
+
+    def test_combinatorics_rejects_ambiguous_or_inconsistent_parameters(self):
+        version = "1.3.0"
+        missing_repetition = execute(
+            "calculation.combinatorics",
+            {"contractVersion": version, "operation": "combination", "itemCount": 5, "selectionCount": 2},
+        )
+        self.assertEqual(missing_repetition["code"], "invalid_request")
+        bad_multiplicities = execute(
+            "calculation.combinatorics",
+            {"contractVersion": version, "operation": "permutation", "itemCount": 5, "multiplicities": [2, 2]},
+        )
+        self.assertEqual(bad_multiplicities["code"], "invalid_request")
+
+    def test_contract_requires_operation_specific_inputs(self):
+        with self.assertRaises(ContractViolation):
+            validate_input(
+                "calculation.combinatorics",
+                {"contractVersion": "1.3.0", "operation": "arrangement", "itemCount": 5},
+            )
+        with self.assertRaises(ContractViolation):
+            validate_input(
+                "calculation.probability",
+                {
+                    "contractVersion": "1.3.0",
+                    "operation": "conditional",
+                    "eventCount": 3,
+                    "sampleSpaceSize": 6,
+                    "sampleSpaceModel": "equiprobable",
+                },
+            )
+
+    def test_probability_requires_finite_sample_space_and_conditional_assumption(self):
+        version = "1.3.0"
+        simple = execute(
+            "calculation.probability",
+            {"contractVersion": version, "operation": "simple", "eventCount": 2, "sampleSpaceSize": 6, "sampleSpaceModel": "equiprobable"},
+        )
+        self.assertEqual(simple["value"], "1/3")
+        self.assertIn("6 outcomes", simple["assumptions"][0])
+
+        dependent = execute(
+            "calculation.probability",
+            {
+                "contractVersion": version,
+                "operation": "conditional",
+                "eventCount": 4,
+                "sampleSpaceSize": 10,
+                "sampleSpaceModel": "equiprobable",
+                "conditionEventCount": 5,
+                "jointEventCount": 2,
+                "dependencyAssumption": "dependent",
+            },
+        )
+        self.assertEqual(dependent["value"], "2/5")
+
+        independent = execute(
+            "calculation.probability",
+            {
+                "contractVersion": version,
+                "operation": "conditional",
+                "eventCount": 3,
+                "sampleSpaceSize": 6,
+                "sampleSpaceModel": "equiprobable",
+                "conditionEventCount": 2,
+                "jointEventCount": 1,
+                "dependencyAssumption": "independent",
+            },
+        )
+        self.assertEqual(independent["value"], "1/2")
+
+    def test_probability_rejects_missing_or_inconsistent_counts(self):
+        version = "1.3.0"
+        impossible_event = execute(
+            "calculation.probability",
+            {"contractVersion": version, "operation": "simple", "eventCount": 7, "sampleSpaceSize": 6, "sampleSpaceModel": "equiprobable"},
+        )
+        self.assertEqual(impossible_event["code"], "invalid_request")
+        conditional = {
+            "contractVersion": version,
+            "operation": "conditional",
+            "eventCount": 3,
+            "sampleSpaceSize": 6,
+            "sampleSpaceModel": "equiprobable",
+            "conditionEventCount": 2,
+            "jointEventCount": 1,
+        }
+        missing_assumption = execute("calculation.probability", conditional)
+        self.assertEqual(missing_assumption["code"], "invalid_request")
+        inconsistent_independence = execute(
+            "calculation.probability", dict(conditional, dependencyAssumption="independent", jointEventCount=2)
+        )
+        self.assertEqual(inconsistent_independence["code"], "invalid_request")
+        impossible_joint = execute(
+            "calculation.probability", dict(conditional, dependencyAssumption="dependent", jointEventCount=4)
+        )
+        self.assertEqual(impossible_joint["code"], "invalid_request")
+        impossible_lower_bound = execute(
+            "calculation.probability",
+            dict(
+                conditional,
+                eventCount=4,
+                sampleSpaceSize=6,
+                conditionEventCount=4,
+                jointEventCount=1,
+                dependencyAssumption="dependent",
+            ),
+        )
+        self.assertEqual(impossible_lower_bound["code"], "invalid_request")
+        empty_condition = execute(
+            "calculation.probability",
+            dict(conditional, conditionEventCount=0, jointEventCount=0, dependencyAssumption="dependent"),
+        )
+        self.assertEqual(empty_condition["status"], "ambiguous")
+        self.assertEqual(empty_condition["value"], "")
+
     def test_unit_conversion_is_dimension_checked(self):
         request = TOOLS["calculation.convertUnits"]["examples"]["validInput"]
         self.assertEqual(execute("calculation.convertUnits", request)["convertedAmount"], "1500")
@@ -206,7 +366,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_symbolic_polynomial_derivative_and_integral(self):
         request = {
-            "contractVersion": "1.2.0",
+            "contractVersion": "1.3.0",
             "operation": "derivative",
             "expression": "x^2 + 3*x + 1",
             "variable": "x",
@@ -220,7 +380,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_linear_solve_substitute_and_missing_limit_point(self):
         request = {
-            "contractVersion": "1.2.0",
+            "contractVersion": "1.3.0",
             "operation": "solve",
             "expression": "2*x - 4",
             "variable": "x",
@@ -236,7 +396,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_unsafe_or_unsupported_symbolic_expression_fails_closed(self):
         request = {
-            "contractVersion": "1.2.0",
+            "contractVersion": "1.3.0",
             "operation": "simplify",
             "expression": "__import__('os').system('whoami')",
             "variable": "x",
@@ -248,7 +408,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_oversized_polynomial_coefficient_is_rejected(self):
         request = {
-            "contractVersion": "1.2.0",
+            "contractVersion": "1.3.0",
             "operation": "simplify",
             "expression": ("9" * 700) + "*x",
             "variable": "x",
@@ -290,7 +450,7 @@ class CalculationTests(unittest.TestCase):
                 "status": "ready",
                 "tool": "calculation.evaluate",
                 "input": {
-                    "contractVersion": "1.2.0",
+                    "contractVersion": "1.3.0",
                     "operation": "power",
                     "operands": ["2", "5"],
                     "domain": "real",
@@ -309,7 +469,7 @@ class CalculationTests(unittest.TestCase):
                 "status": "ready",
                 "tool": "calculation.statistics",
                 "input": {
-                    "contractVersion": "1.2.0",
+                    "contractVersion": "1.3.0",
                     "operation": "weighted_mean",
                     "values": ["10", "20"],
                     "weights": ["1", "3"],
@@ -330,7 +490,7 @@ class CalculationTests(unittest.TestCase):
                 "status": "ready",
                 "tool": "calculation.evaluate",
                 "input": {
-                    "contractVersion": "1.2.0",
+                    "contractVersion": "1.3.0",
                     "operation": "multiply",
                     "operands": ["2", "3"],
                     "domain": "math",

@@ -64,6 +64,19 @@ def validate(schema: dict[str, Any], value: Any, path: str = "$") -> None:
     elif kind is not None:
         raise ContractViolation(f"Unsupported schema type: {kind}")
 
+    for child_schema in schema.get("allOf", ()):
+        validate(child_schema, value, path)
+
+    if "if" in schema:
+        try:
+            validate(schema["if"], value, path)
+        except ContractViolation:
+            branch = schema.get("else")
+        else:
+            branch = schema.get("then")
+        if branch is not None:
+            validate(branch, value, path)
+
     if "const" in schema and value != schema["const"]:
         raise ContractViolation(f"{path} does not match the contract version")
     if "enum" in schema and value not in schema["enum"]:
