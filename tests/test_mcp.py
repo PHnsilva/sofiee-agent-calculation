@@ -22,6 +22,8 @@ EXPECTED_NAMES = {
     'calculation.convertUnits',
     'calculation.symbolic',
     'calculation.statistics',
+    'calculation.combinatorics',
+    'calculation.probability',
 }
 TEST_TOOL = "calculation.evaluate"
 PAYLOAD = {'contractVersion': CONTRACT['contractVersion'],
@@ -48,12 +50,32 @@ async def discover_and_call():
                 'precision': {'mode': 'exact', 'decimalPlaces': 8},
             },
         )
-        return names, tools, result, statistics
+        combinations = await client.call_tool(
+            'calculation.combinatorics',
+            {
+                'contractVersion': CONTRACT['contractVersion'],
+                'operation': 'combination',
+                'itemCount': 5,
+                'selectionCount': 3,
+                'allowRepetition': False,
+            },
+        )
+        probability = await client.call_tool(
+            'calculation.probability',
+            {
+                'contractVersion': CONTRACT['contractVersion'],
+                'operation': 'simple',
+                'eventCount': 1,
+                'sampleSpaceSize': 6,
+                'sampleSpaceModel': 'equiprobable',
+            },
+        )
+        return names, tools, result, statistics, combinations, probability
 
 
 class McpTransportTests(unittest.TestCase):
     def test_real_client_discovers_contract_tools_and_calls_domain_operation(self):
-        names, tools, result, statistics = asyncio.run(discover_and_call())
+        names, tools, result, statistics, combinations, probability = asyncio.run(discover_and_call())
         self.assertSetEqual(names, EXPECTED_NAMES)
         self.assertEqual(
             tools[TEST_TOOL].input_schema["$id"],
@@ -67,6 +89,10 @@ class McpTransportTests(unittest.TestCase):
         self.assertFalse(statistics.is_error)
         self.assertEqual(statistics.structured_content.get("operation"), "weighted_mean")
         self.assertEqual(statistics.structured_content.get("value"), "35/2")
+        self.assertFalse(combinations.is_error)
+        self.assertEqual(combinations.structured_content.get("value"), "10")
+        self.assertFalse(probability.is_error)
+        self.assertEqual(probability.structured_content.get("value"), "1/6")
 
 
 if __name__ == "__main__":

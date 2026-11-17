@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "contractVersion": "1.2.0",
+  "contractVersion": "1.3.0",
   "purpose": "MCP tool contracts for deterministic calculation; schema presence does not provide an execution engine.",
   "errorSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -8,7 +8,7 @@
     "type": "object", "additionalProperties": false,
     "required": ["contractVersion", "code", "message", "retryable"],
     "properties": {
-      "contractVersion": { "const": "1.2.0" },
+      "contractVersion": { "const": "1.3.0" },
       "code": { "enum": ["invalid_request", "invalid_expression", "unsupported_operation", "domain_error", "division_by_zero", "unit_mismatch", "insufficient_data", "limit_exceeded", "unavailable", "internal_error"] },
       "message": { "type": "string", "minLength": 1, "maxLength": 500 },
       "retryable": { "type": "boolean" }
@@ -26,7 +26,7 @@
         "type": "object", "additionalProperties": false,
         "required": ["contractVersion", "operation", "operands", "domain", "precision"],
         "properties": {
-          "contractVersion": { "const": "1.2.0" },
+          "contractVersion": { "const": "1.3.0" },
           "operation": { "enum": ["add", "subtract", "multiply", "divide", "power", "root", "percentage", "percentage_change", "ratio"] },
           "operands": { "type": "array", "minItems": 1, "maxItems": 2, "items": { "type": "string", "pattern": "^-?(?:[0-9]+(?:[.,][0-9]+)?|[0-9]+/[1-9][0-9]*)$", "maxLength": 128 } },
           "domain": { "enum": ["real", "complex"] },
@@ -39,7 +39,7 @@
         "type": "object", "additionalProperties": false,
         "required": ["contractVersion", "status", "operation", "value", "unit", "method", "assumptions", "errorBound"],
         "properties": {
-          "contractVersion": { "const": "1.2.0" },
+          "contractVersion": { "const": "1.3.0" },
           "status": { "enum": ["exact", "approximate", "insufficient_data", "unsupported", "ambiguous"] },
           "operation": { "type": "string", "minLength": 1, "maxLength": 40 },
           "value": { "type": "string", "maxLength": 1000 },
@@ -50,10 +50,10 @@
         }
       },
       "examples": {
-        "validInput": { "contractVersion": "1.2.0", "operation": "divide", "operands": ["1", "3"], "domain": "real", "precision": { "mode": "decimal", "decimalPlaces": 8 } },
-        "invalidInput": { "contractVersion": "1.2.0", "operation": "divide", "operands": ["1", "0"], "domain": "real", "precision": { "mode": "decimal", "decimalPlaces": 80 }, "python": "import os" },
-        "validResult": { "contractVersion": "1.2.0", "status": "approximate", "operation": "divide", "value": "0.33333333", "unit": "", "method": "decimal division", "assumptions": [], "errorBound": "<0.00000001" },
-        "error": { "contractVersion": "1.2.0", "code": "division_by_zero", "message": "O divisor deve ser diferente de zero.", "retryable": false }
+        "validInput": { "contractVersion": "1.3.0", "operation": "divide", "operands": ["1", "3"], "domain": "real", "precision": { "mode": "decimal", "decimalPlaces": 8 } },
+        "invalidInput": { "contractVersion": "1.3.0", "operation": "divide", "operands": ["1", "0"], "domain": "real", "precision": { "mode": "decimal", "decimalPlaces": 80 }, "python": "import os" },
+        "validResult": { "contractVersion": "1.3.0", "status": "approximate", "operation": "divide", "value": "0.33333333", "unit": "", "method": "decimal division", "assumptions": [], "errorBound": "<0.00000001" },
+        "error": { "contractVersion": "1.3.0", "code": "division_by_zero", "message": "O divisor deve ser diferente de zero.", "retryable": false }
       }
     },
     {
@@ -67,7 +67,7 @@
         "type": "object", "additionalProperties": false,
         "required": ["contractVersion", "operation", "expression", "variable", "domain", "substitutions", "precision"],
         "properties": {
-          "contractVersion": { "const": "1.2.0" },
+          "contractVersion": { "const": "1.3.0" },
           "operation": { "enum": ["simplify", "substitute", "solve", "limit", "derivative", "integral"] },
           "expression": { "type": "string", "minLength": 1, "maxLength": 4000 },
           "variable": { "type": "string", "minLength": 1, "maxLength": 64 },
@@ -82,7 +82,7 @@
         "type": "object", "additionalProperties": false,
         "required": ["contractVersion", "status", "operation", "expression", "value", "domain", "conditions"],
         "properties": {
-          "contractVersion": { "const": "1.2.0" },
+          "contractVersion": { "const": "1.3.0" },
           "status": { "enum": ["exact", "approximate", "insufficient_data", "unsupported", "ambiguous"] },
           "operation": { "type": "string", "minLength": 1, "maxLength": 40 },
           "expression": { "type": "string", "maxLength": 4000 },
@@ -92,10 +92,10 @@
         }
       },
       "examples": {
-        "validInput": { "contractVersion": "1.2.0", "operation": "derivative", "expression": "x^2", "variable": "x", "domain": "real", "substitutions": [], "precision": 0 },
-        "invalidInput": { "contractVersion": "1.2.0", "operation": "execute_python", "expression": "__import__('os')", "variable": "x", "domain": "real", "substitutions": [], "precision": 0 },
-        "validResult": { "contractVersion": "1.2.0", "status": "exact", "operation": "derivative", "expression": "x^2", "value": "2*x", "domain": "real", "conditions": [] },
-        "error": { "contractVersion": "1.2.0", "code": "invalid_expression", "message": "A expressão não pertence à gramática matemática suportada.", "retryable": false }
+        "validInput": { "contractVersion": "1.3.0", "operation": "derivative", "expression": "x^2", "variable": "x", "domain": "real", "substitutions": [], "precision": 0 },
+        "invalidInput": { "contractVersion": "1.3.0", "operation": "execute_python", "expression": "__import__('os')", "variable": "x", "domain": "real", "substitutions": [], "precision": 0 },
+        "validResult": { "contractVersion": "1.3.0", "status": "exact", "operation": "derivative", "expression": "x^2", "value": "2*x", "domain": "real", "conditions": [] },
+        "error": { "contractVersion": "1.3.0", "code": "invalid_expression", "message": "A expressão não pertence à gramática matemática suportada.", "retryable": false }
       }
     },
     {
@@ -109,7 +109,7 @@
         "type": "object", "additionalProperties": false,
         "required": ["contractVersion", "amount", "sourceUnit", "targetUnit", "decimalPlaces"],
         "properties": {
-          "contractVersion": { "const": "1.2.0" },
+          "contractVersion": { "const": "1.3.0" },
           "amount": { "type": "string", "pattern": "^-?[0-9]+([.,][0-9]+)?$", "maxLength": 128 },
           "sourceUnit": { "type": "string", "minLength": 1, "maxLength": 64 },
           "targetUnit": { "type": "string", "minLength": 1, "maxLength": 64 },
@@ -122,7 +122,7 @@
         "type": "object", "additionalProperties": false,
         "required": ["contractVersion", "status", "originalAmount", "convertedAmount", "sourceUnit", "targetUnit", "precision"],
         "properties": {
-          "contractVersion": { "const": "1.2.0" },
+          "contractVersion": { "const": "1.3.0" },
           "status": { "enum": ["exact", "approximate", "unsupported", "insufficient_data"] },
           "originalAmount": { "type": "string", "maxLength": 128 },
           "convertedAmount": { "type": "string", "maxLength": 128 },
@@ -132,10 +132,10 @@
         }
       },
       "examples": {
-        "validInput": { "contractVersion": "1.2.0", "amount": "1.5", "sourceUnit": "km", "targetUnit": "m", "decimalPlaces": 2 },
-        "invalidInput": { "contractVersion": "1.2.0", "amount": "1.5", "sourceUnit": "kg", "targetUnit": "m", "decimalPlaces": -1 },
-        "validResult": { "contractVersion": "1.2.0", "status": "exact", "originalAmount": "1.5", "convertedAmount": "1500", "sourceUnit": "km", "targetUnit": "m", "precision": "exact" },
-        "error": { "contractVersion": "1.2.0", "code": "unit_mismatch", "message": "As unidades não têm dimensão compatível.", "retryable": false }
+        "validInput": { "contractVersion": "1.3.0", "amount": "1.5", "sourceUnit": "km", "targetUnit": "m", "decimalPlaces": 2 },
+        "invalidInput": { "contractVersion": "1.3.0", "amount": "1.5", "sourceUnit": "kg", "targetUnit": "m", "decimalPlaces": -1 },
+        "validResult": { "contractVersion": "1.3.0", "status": "exact", "originalAmount": "1.5", "convertedAmount": "1500", "sourceUnit": "km", "targetUnit": "m", "precision": "exact" },
+        "error": { "contractVersion": "1.3.0", "code": "unit_mismatch", "message": "As unidades não têm dimensão compatível.", "retryable": false }
       }
     },
     {
@@ -162,7 +162,7 @@
         ],
         "properties": {
           "contractVersion": {
-            "const": "1.2.0"
+            "const": "1.3.0"
           },
           "operation": {
             "enum": [
@@ -237,7 +237,7 @@
         ],
         "properties": {
           "contractVersion": {
-            "const": "1.2.0"
+            "const": "1.3.0"
           },
           "status": {
             "enum": [
@@ -294,7 +294,7 @@
       },
       "examples": {
         "validInput": {
-          "contractVersion": "1.2.0",
+          "contractVersion": "1.3.0",
           "operation": "weighted_mean",
           "values": [
             "10",
@@ -311,7 +311,7 @@
           }
         },
         "invalidInput": {
-          "contractVersion": "1.2.0",
+          "contractVersion": "1.3.0",
           "operation": "mean",
           "values": [
             "NaN"
@@ -322,7 +322,7 @@
           }
         },
         "validResult": {
-          "contractVersion": "1.2.0",
+          "contractVersion": "1.3.0",
           "status": "exact",
           "operation": "weighted_mean",
           "value": "35/2",
@@ -335,11 +335,111 @@
           "errorBound": "0"
         },
         "error": {
-          "contractVersion": "1.2.0",
+          "contractVersion": "1.3.0",
           "code": "invalid_request",
           "message": "Weighted mean requires one non-negative weight per observation and a positive total.",
           "retryable": false
         }
+      }
+    },
+    {
+      "name": "calculation.combinatorics",
+      "sideEffects": false,
+      "description": "Compute exact finite permutations, arrangements, and combinations with explicit repetition rules.",
+      "errorCodes": ["invalid_request", "unavailable", "internal_error"],
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://sofiee-agent-calculation.local/contracts/v1/combinatorics.input.schema.json",
+        "type": "object", "additionalProperties": false,
+        "required": ["contractVersion", "operation", "itemCount"],
+        "properties": {
+          "contractVersion": { "const": "1.3.0" },
+          "operation": { "enum": ["permutation", "arrangement", "combination"] },
+          "itemCount": { "type": "integer", "minimum": 0, "maximum": 1000 },
+          "selectionCount": { "type": "integer", "minimum": 0, "maximum": 1000 },
+          "allowRepetition": { "type": "boolean" },
+          "multiplicities": { "type": "array", "minItems": 1, "maxItems": 1000, "items": { "type": "integer", "minimum": 1, "maximum": 1000 } }
+        },
+        "allOf": [
+          {
+            "if": { "type": "object", "properties": { "operation": { "const": "arrangement" } } },
+            "then": { "type": "object", "required": ["selectionCount", "allowRepetition"] }
+          },
+          {
+            "if": { "type": "object", "properties": { "operation": { "const": "combination" } } },
+            "then": { "type": "object", "required": ["selectionCount", "allowRepetition"] }
+          }
+        ]
+      },
+      "resultSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://sofiee-agent-calculation.local/contracts/v1/combinatorics.result.schema.json",
+        "type": "object", "additionalProperties": false,
+        "required": ["contractVersion", "status", "operation", "value", "method", "assumptions", "errorBound"],
+        "properties": {
+          "contractVersion": { "const": "1.3.0" },
+          "status": { "enum": ["exact", "unsupported"] },
+          "operation": { "enum": ["permutation", "arrangement", "combination"] },
+          "value": { "type": "string", "maxLength": 1000 },
+          "method": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "assumptions": { "type": "array", "maxItems": 10, "items": { "type": "string", "maxLength": 500 } },
+          "errorBound": { "const": "0" }
+        }
+      },
+      "examples": {
+        "validInput": { "contractVersion": "1.3.0", "operation": "arrangement", "itemCount": 5, "selectionCount": 3, "allowRepetition": false },
+        "invalidInput": { "contractVersion": "1.3.0", "operation": "arrangement", "itemCount": -1, "selectionCount": 3, "allowRepetition": false },
+        "validResult": { "contractVersion": "1.3.0", "status": "exact", "operation": "arrangement", "value": "60", "method": "Arrangement without repetition: n! / (n-r)!; order matters.", "assumptions": ["Each of the n item types is available; r is the number selected."], "errorBound": "0" },
+        "error": { "contractVersion": "1.3.0", "code": "invalid_request", "message": "Arrangement and combination require selectionCount and allowRepetition only.", "retryable": false }
+      }
+    },
+    {
+      "name": "calculation.probability",
+      "sideEffects": false,
+      "description": "Compute exact finite-space probabilities; conditional probability requires explicit event counts and a dependency assumption.",
+      "errorCodes": ["invalid_request", "unavailable", "internal_error"],
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://sofiee-agent-calculation.local/contracts/v1/probability.input.schema.json",
+        "type": "object", "additionalProperties": false,
+        "required": ["contractVersion", "operation", "eventCount", "sampleSpaceSize", "sampleSpaceModel"],
+        "properties": {
+          "contractVersion": { "const": "1.3.0" },
+          "operation": { "enum": ["simple", "conditional"] },
+          "eventCount": { "type": "integer", "minimum": 0, "maximum": 1000000 },
+          "sampleSpaceSize": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+          "sampleSpaceModel": { "enum": ["equiprobable"] },
+          "conditionEventCount": { "type": "integer", "minimum": 0, "maximum": 1000000 },
+          "jointEventCount": { "type": "integer", "minimum": 0, "maximum": 1000000 },
+          "dependencyAssumption": { "enum": ["independent", "dependent"] }
+        },
+        "allOf": [
+          {
+            "if": { "type": "object", "properties": { "operation": { "const": "conditional" } } },
+            "then": { "type": "object", "required": ["conditionEventCount", "jointEventCount", "dependencyAssumption"] }
+          }
+        ]
+      },
+      "resultSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://sofiee-agent-calculation.local/contracts/v1/probability.result.schema.json",
+        "type": "object", "additionalProperties": false,
+        "required": ["contractVersion", "status", "operation", "value", "method", "assumptions", "errorBound"],
+        "properties": {
+          "contractVersion": { "const": "1.3.0" },
+          "status": { "enum": ["exact", "ambiguous"] },
+          "operation": { "enum": ["simple", "conditional"] },
+          "value": { "type": "string", "maxLength": 1000 },
+          "method": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "assumptions": { "type": "array", "maxItems": 10, "items": { "type": "string", "maxLength": 500 } },
+          "errorBound": { "const": "0" }
+        }
+      },
+      "examples": {
+        "validInput": { "contractVersion": "1.3.0", "operation": "simple", "eventCount": 1, "sampleSpaceSize": 6, "sampleSpaceModel": "equiprobable" },
+        "invalidInput": { "contractVersion": "1.3.0", "operation": "simple", "eventCount": 1, "sampleSpaceSize": 0, "sampleSpaceModel": "equiprobable" },
+        "validResult": { "contractVersion": "1.3.0", "status": "exact", "operation": "simple", "value": "1/6", "method": "P(A) = 1/6, reduced exactly.", "assumptions": ["User-declared equiprobable finite sample space: 6 outcomes."], "errorBound": "0" },
+        "error": { "contractVersion": "1.3.0", "code": "invalid_request", "message": "eventCount must be between zero and a positive sampleSpaceSize", "retryable": false }
       }
     }
   ]
