@@ -20,7 +20,7 @@ class FakeModel:
 class CalculationTests(unittest.TestCase):
     def test_exact_arithmetic_uses_deterministic_tool(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "divide",
             "operands": ["1", "3"],
             "domain": "real",
@@ -32,7 +32,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_fraction_addition_is_exact(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "add",
             "operands": ["1/3", "1/6"],
             "domain": "real",
@@ -44,7 +44,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_decimal_division_reports_approximation_and_error(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "divide",
             "operands": ["1", "3"],
             "domain": "real",
@@ -57,7 +57,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_exact_root(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "root",
             "operands": ["27", "3"],
             "domain": "real",
@@ -69,7 +69,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_percentage_and_zero_division(self):
         percentage = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "percentage",
             "operands": ["15", "80"],
             "domain": "real",
@@ -81,7 +81,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_percentage_change_has_explicit_baseline_and_zero_rule(self):
         change = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "percentage_change",
             "operands": ["100", "120"],
             "domain": "real",
@@ -98,7 +98,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_decimal_comma_is_explicit_and_mixed_separators_are_rejected(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "add",
             "operands": ["1,5", "2.25"],
             "domain": "real",
@@ -112,7 +112,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_decimal_rounding_is_reported_as_approximate_half_even(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "divide",
             "operands": ["5", "2"],
             "domain": "real",
@@ -136,9 +136,52 @@ class CalculationTests(unittest.TestCase):
         self.assertEqual(limited["status"], "unsupported")
         self.assertEqual(limited["convertedAmount"], "")
 
+    def test_area_conversion_preserves_original_quantity_and_precision(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "amount": "10000",
+            "sourceUnit": "m²",
+            "targetUnit": "ha",
+            "decimalPlaces": 4,
+        }
+        result = execute("calculation.convertUnits", request)
+        self.assertEqual(result["status"], "exact")
+        self.assertEqual(result["originalAmount"], "10000")
+        self.assertEqual(result["convertedAmount"], "1")
+        self.assertEqual(result["sourceUnit"], "m²")
+        self.assertEqual(result["targetUnit"], "ha")
+
+    def test_quantity_addition_normalizes_compatible_units_and_rejects_mismatch(self):
+        compatible = {
+            "contractVersion": "1.2.0",
+            "quantities": [
+                {"amount": "1", "unit": "km"},
+                {"amount": "500", "unit": "m"},
+            ],
+        }
+        result = execute("calculation.addQuantities", compatible)
+        self.assertEqual(result["status"], "exact")
+        self.assertEqual(result["sum"], "3/2")
+        self.assertEqual(result["unit"], "km")
+        self.assertEqual(result["normalizedQuantities"][1]["amount"], "1/2")
+        self.assertEqual(result["originalQuantities"], compatible["quantities"])
+
+        incompatible = {
+            "contractVersion": "1.2.0",
+            "quantities": [
+                {"amount": "1", "unit": "kg"},
+                {"amount": "1", "unit": "m"},
+            ],
+        }
+        rejected = execute("calculation.addQuantities", incompatible)
+        self.assertEqual(rejected["status"], "unsupported")
+        self.assertEqual(rejected["normalizedQuantities"], [])
+        self.assertEqual(rejected["sum"], "")
+        self.assertIn("different dimensions", rejected["precision"])
+
     def test_symbolic_polynomial_derivative_and_integral(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "derivative",
             "expression": "x^2 + 3*x + 1",
             "variable": "x",
@@ -152,7 +195,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_linear_solve_substitute_and_missing_limit_point(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "solve",
             "expression": "2*x - 4",
             "variable": "x",
@@ -168,7 +211,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_unsafe_or_unsupported_symbolic_expression_fails_closed(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "simplify",
             "expression": "__import__('os').system('whoami')",
             "variable": "x",
@@ -180,7 +223,7 @@ class CalculationTests(unittest.TestCase):
 
     def test_oversized_polynomial_coefficient_is_rejected(self):
         request = {
-            "contractVersion": "1.1.0",
+            "contractVersion": "1.2.0",
             "operation": "simplify",
             "expression": ("9" * 700) + "*x",
             "variable": "x",
@@ -222,7 +265,7 @@ class CalculationTests(unittest.TestCase):
                 "status": "ready",
                 "tool": "calculation.evaluate",
                 "input": {
-                    "contractVersion": "1.1.0",
+                    "contractVersion": "1.2.0",
                     "operation": "power",
                     "operands": ["2", "5"],
                     "domain": "real",
@@ -241,7 +284,7 @@ class CalculationTests(unittest.TestCase):
                 "status": "ready",
                 "tool": "calculation.evaluate",
                 "input": {
-                    "contractVersion": "1.1.0",
+                    "contractVersion": "1.2.0",
                     "operation": "multiply",
                     "operands": ["2", "3"],
                     "domain": "math",
