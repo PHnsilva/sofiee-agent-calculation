@@ -193,6 +193,62 @@ class CalculationTests(unittest.TestCase):
         integral = dict(request, operation="integral")
         self.assertEqual(execute("calculation.symbolic", integral)["value"], "1/3*x^3 + 3/2*x^2 + x + C")
 
+    def test_multivariate_simplification_canonicalizes_equivalent_polynomials(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "operation": "simplify",
+            "expression": "(x + y)^2",
+            "variable": "x",
+            "domain": "real",
+            "substitutions": [],
+            "precision": 0,
+        }
+        expanded = execute("calculation.symbolic", request)
+        equivalent = execute(
+            "calculation.symbolic",
+            dict(request, expression="x^2 + 2*y*x + y^2"),
+        )
+
+        self.assertEqual(expanded["status"], "exact")
+        self.assertEqual(expanded["value"], "x^2 + 2*x*y + y^2")
+        self.assertEqual(expanded["value"], equivalent["value"])
+
+    def test_substitution_requires_values_for_every_expression_variable(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "operation": "substitute",
+            "expression": "x*y + 2*x",
+            "variable": "x",
+            "domain": "real",
+            "substitutions": [{"name": "x", "value": "3"}],
+            "precision": 0,
+        }
+        incomplete = execute("calculation.symbolic", request)
+        self.assertEqual(incomplete["status"], "insufficient_data")
+        self.assertIn("y", incomplete["conditions"][0])
+
+        complete = execute(
+            "calculation.symbolic",
+            dict(request, substitutions=[{"name": "x", "value": "3"}, {"name": "y", "value": "4"}]),
+        )
+        self.assertEqual(complete["status"], "exact")
+        self.assertEqual(complete["value"], "18")
+
+    def test_symbolic_parser_fails_closed_on_extra_names_and_large_powers(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "operation": "simplify",
+            "expression": "x^11",
+            "variable": "x",
+            "domain": "real",
+            "substitutions": [],
+            "precision": 0,
+        }
+        self.assertEqual(execute("calculation.symbolic", request)["status"], "unsupported")
+
+        too_many_variables = dict(request, expression="a + b + c + d + e + f + g")
+        self.assertEqual(execute("calculation.symbolic", too_many_variables)["status"], "unsupported")
+
     def test_linear_solve_substitute_and_missing_limit_point(self):
         request = {
             "contractVersion": "1.2.0",

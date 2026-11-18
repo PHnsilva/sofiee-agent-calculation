@@ -9,6 +9,9 @@ from decimal import Decimal, ROUND_HALF_EVEN, localcontext
 from fractions import Fraction
 from typing import Any
 
+import sympy as sp
+from sympy.polys.polyerrors import PolynomialError
+
 from .contracts import CONTRACT, ContractViolation, error_result, validate_input, validate_result
 from .local_model import LocalModel, ModelCallError
 
@@ -449,6 +452,157 @@ def _polynomial_text(polynomial: dict[int, Fraction], variable: str) -> str:
     return "".join(parts)
 
 
+MAX_SYMBOLIC_NODES = 256
+MAX_SYMBOLIC_VARIABLES = 6
+MAX_SYMBOLIC_DEGREE = 32
+MAX_SYMBOLIC_TERMS = 512
+MAX_SYMBOLIC_PRODUCTS = 8192
+MAX_SYMBOLIC_POWER = 10
+
+
+def _bounded_symbolic_expression(expression: sp.Expr) -> bool:
+    symbols = sorted(expression.free_symbols, key=lambda item: item.name)
+    if len(symbols) > MAX_SYMBOLIC_VARIABLES:
+        return False
+    try:
+        polynomial = sp.Poly(expression, *symbols, domain=sp.QQ) if symbols else sp.Poly(expression, domain=sp.QQ)
+    except (PolynomialError, TypeError, ValueError, ZeroDivisionError, OverflowError):
+        return False
+    if polynomial.total_degree() > MAX_SYMBOLIC_DEGREE or len(polynomial.terms()) > MAX_SYMBOLIC_TERMS:
+        return False
+    for coefficient in polynomial.coeffs():
+        rational = Fraction(int(coefficient.p), int(coefficient.q))
+        if not _bounded_fraction(rational):
+            return False
+    return True
+
+
+def _parse_symbolic_polynomial(expression: str) -> sp.Expr | None:
+    """Build a bounded rational polynomial from a syntax whitelist, without eval-based parsing."""
+    if len(expression) > 4000:
+        return None
+    syntax = expression.replace("^", "**")
+    try:
+        tree = ast.parse(syntax, mode="eval")
+    except (SyntaxError, ValueError):
+        return None
+    nodes = list(ast.walk(tree))
+    if len(nodes) > MAX_SYMBOLIC_NODES:
+        return None
+
+    variables: dict[str, sp.Symbol] = {}
+
+    def parse(node: ast.AST) -> sp.Expr | None:
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)) and not isinstance(node.value, bool):
+            source = ast.get_source_segment(syntax, node)
+            if source is None or len(source.replace("_", "")) > 128:
+                return None
+            try:
+                rational = Fraction(source)
+            except (ValueError, ZeroDivisionError, OverflowError):
+                return None
+            if not _bounded_fraction(rational):
+                return None
+            return sp.Rational(rational.numerator, rational.denominator)
+        if isinstance(node, ast.Name):
+            if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,63}", node.id) is None or node.id.startswith("__"):
+                return None
+            if node.id not in variables:
+                if len(variables) >= MAX_SYMBOLIC_VARIABLES:
+                    return None
+                variables[node.id] = sp.Symbol(node.id)
+            return variables[node.id]
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+            operand = parse(node.operand)
+            if operand is None:
+                return None
+            return operand if isinstance(node.op, ast.UAdd) else -operand
+        if not isinstance(node, ast.BinOp):
+            return None
+        left = parse(node.left)
+        right = parse(node.right)
+        if left is None or right is None:
+            return None
+        if isinstance(node.op, ast.Add):
+            result = left + right
+        elif isinstance(node.op, ast.Sub):
+            result = left - right
+        elif isinstance(node.op, ast.Mult):
+            if len(sp.Add.make_args(left)) * len(sp.Add.make_args(right)) > MAX_SYMBOLIC_PRODUCTS:
+                return None
+            result = left * right
+        elif isinstance(node.op, ast.Div):
+            if not right.is_Rational or right == 0:
+                return None
+            result = left / right
+        elif isinstance(node.op, ast.Pow):
+            if not right.is_Integer or right < 0 or right > MAX_SYMBOLIC_POWER:
+                return None
+            if len(sp.Add.make_args(left)) ** int(right) > MAX_SYMBOLIC_PRODUCTS:
+                return None
+            result = left ** int(right)
+        else:
+            return None
+        return sp.expand(result) if _bounded_symbolic_expression(result) else None
+
+    try:
+        result = parse(tree.body)
+        return sp.expand(result) if result is not None and _bounded_symbolic_expression(result) else None
+    except (ArithmeticError, PolynomialError, RecursionError, TypeError, ValueError, OverflowError):
+        return None
+
+
+def _symbolic_expression_text(expression: sp.Expr) -> str:
+    return str(expression).replace("**", "^")
+
+
+def _simplify_or_substitute(payload: dict[str, Any]) -> dict[str, Any]:
+    expression = _parse_symbolic_polynomial(payload["expression"])
+    if expression is None:
+        return _symbolic_result(
+            payload,
+            "unsupported",
+            "",
+            ["Only bounded rational polynomials over at most six variables are supported."],
+        )
+
+    if payload["operation"] == "simplify":
+        value = _symbolic_expression_text(expression)
+    else:
+        supplied: dict[str, Fraction] = {}
+        for item in payload["substitutions"]:
+            name = item["name"]
+            if name in supplied:
+                return _symbolic_result(payload, "ambiguous", "", [f"More than one value was supplied for {name}."])
+            supplied[name] = _fraction(item["value"])
+        required = {symbol.name for symbol in expression.free_symbols}
+        extra = sorted(set(supplied) - required)
+        if extra:
+            return _symbolic_result(
+                payload,
+                "ambiguous",
+                "",
+                ["Values were supplied for variables absent from the expression: " + ", ".join(extra) + "."],
+            )
+        missing = sorted(required - set(supplied))
+        if missing:
+            return _symbolic_result(
+                payload,
+                "insufficient_data",
+                "",
+                ["Provide values for: " + ", ".join(missing) + "."],
+            )
+        mapping = {
+            sp.Symbol(name): sp.Rational(value.numerator, value.denominator)
+            for name, value in supplied.items()
+        }
+        value = _symbolic_expression_text(sp.expand(expression.subs(mapping)))
+
+    if len(value) > 4000:
+        return _symbolic_result(payload, "unsupported", "", ["The symbolic result exceeds the contract size limit."])
+    return _symbolic_result(payload, "exact", value)
+
+
 def _symbolic_result(payload: dict[str, Any], status: str, value: str, conditions: list[str] | None = None) -> dict[str, Any]:
     result = {
         "contractVersion": VERSION,
@@ -466,6 +620,8 @@ def _symbolic_result(payload: dict[str, Any], status: str, value: str, condition
 def symbolic(payload: dict[str, Any]) -> dict[str, Any]:
     if payload["domain"] == "complex":
         return _symbolic_result(payload, "unsupported", "", ["Complex symbolic operations are not implemented."])
+    if payload["operation"] in {"simplify", "substitute"}:
+        return _simplify_or_substitute(payload)
     polynomial = _parse_polynomial(payload["expression"], payload["variable"])
     if polynomial is None:
         return _symbolic_result(payload, "unsupported", "", ["Only bounded single-variable polynomials with rational coefficients are supported."])
