@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "contractVersion": "1.1.0",
+  "contractVersion": "1.2.0",
   "purpose": "MCP tool contracts for deterministic calculation; schema presence does not provide an execution engine.",
   "errorSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -8,7 +8,7 @@
     "type": "object", "additionalProperties": false,
     "required": ["contractVersion", "code", "message", "retryable"],
     "properties": {
-      "contractVersion": { "const": "1.1.0" },
+      "contractVersion": { "const": "1.2.0" },
       "code": { "enum": ["invalid_request", "invalid_expression", "unsupported_operation", "domain_error", "division_by_zero", "unit_mismatch", "insufficient_data", "limit_exceeded", "unavailable", "internal_error"] },
       "message": { "type": "string", "minLength": 1, "maxLength": 500 },
       "retryable": { "type": "boolean" }
@@ -26,7 +26,7 @@
         "type": "object", "additionalProperties": false,
         "required": ["contractVersion", "operation", "operands", "domain", "precision"],
         "properties": {
-          "contractVersion": { "const": "1.1.0" },
+          "contractVersion": { "const": "1.2.0" },
           "operation": { "enum": ["add", "subtract", "multiply", "divide", "power", "root", "percentage", "percentage_change", "ratio"] },
           "operands": { "type": "array", "minItems": 1, "maxItems": 2, "items": { "type": "string", "pattern": "^-?(?:[0-9]+(?:[.,][0-9]+)?|[0-9]+/[1-9][0-9]*)$", "maxLength": 128 } },
           "domain": { "enum": ["real", "complex"] },
@@ -39,7 +39,7 @@
         "type": "object", "additionalProperties": false,
         "required": ["contractVersion", "status", "operation", "value", "unit", "method", "assumptions", "errorBound"],
         "properties": {
-          "contractVersion": { "const": "1.1.0" },
+          "contractVersion": { "const": "1.2.0" },
           "status": { "enum": ["exact", "approximate", "insufficient_data", "unsupported", "ambiguous"] },
           "operation": { "type": "string", "minLength": 1, "maxLength": 40 },
           "value": { "type": "string", "maxLength": 1000 },
@@ -50,10 +50,10 @@
         }
       },
       "examples": {
-        "validInput": { "contractVersion": "1.1.0", "operation": "divide", "operands": ["1", "3"], "domain": "real", "precision": { "mode": "decimal", "decimalPlaces": 8 } },
-        "invalidInput": { "contractVersion": "1.1.0", "operation": "divide", "operands": ["1", "0"], "domain": "real", "precision": { "mode": "decimal", "decimalPlaces": 80 }, "python": "import os" },
-        "validResult": { "contractVersion": "1.1.0", "status": "approximate", "operation": "divide", "value": "0.33333333", "unit": "", "method": "decimal division", "assumptions": [], "errorBound": "<0.00000001" },
-        "error": { "contractVersion": "1.1.0", "code": "division_by_zero", "message": "O divisor deve ser diferente de zero.", "retryable": false }
+        "validInput": { "contractVersion": "1.2.0", "operation": "divide", "operands": ["1", "3"], "domain": "real", "precision": { "mode": "decimal", "decimalPlaces": 8 } },
+        "invalidInput": { "contractVersion": "1.2.0", "operation": "divide", "operands": ["1", "0"], "domain": "real", "precision": { "mode": "decimal", "decimalPlaces": 80 }, "python": "import os" },
+        "validResult": { "contractVersion": "1.2.0", "status": "approximate", "operation": "divide", "value": "0.33333333", "unit": "", "method": "decimal division", "assumptions": [], "errorBound": "<0.00000001" },
+        "error": { "contractVersion": "1.2.0", "code": "division_by_zero", "message": "O divisor deve ser diferente de zero.", "retryable": false }
       }
     },
     {
@@ -67,7 +67,7 @@
         "type": "object", "additionalProperties": false,
         "required": ["contractVersion", "operation", "expression", "variable", "domain", "substitutions", "precision"],
         "properties": {
-          "contractVersion": { "const": "1.1.0" },
+          "contractVersion": { "const": "1.2.0" },
           "operation": { "enum": ["simplify", "substitute", "solve", "limit", "derivative", "integral"] },
           "expression": { "type": "string", "minLength": 1, "maxLength": 4000 },
           "variable": { "type": "string", "minLength": 1, "maxLength": 64 },
@@ -82,7 +82,7 @@
         "type": "object", "additionalProperties": false,
         "required": ["contractVersion", "status", "operation", "expression", "value", "domain", "conditions"],
         "properties": {
-          "contractVersion": { "const": "1.1.0" },
+          "contractVersion": { "const": "1.2.0" },
           "status": { "enum": ["exact", "approximate", "insufficient_data", "unsupported", "ambiguous"] },
           "operation": { "type": "string", "minLength": 1, "maxLength": 40 },
           "expression": { "type": "string", "maxLength": 4000 },
@@ -92,10 +92,10 @@
         }
       },
       "examples": {
-        "validInput": { "contractVersion": "1.1.0", "operation": "derivative", "expression": "x^2", "variable": "x", "domain": "real", "substitutions": [], "precision": 0 },
-        "invalidInput": { "contractVersion": "1.1.0", "operation": "execute_python", "expression": "__import__('os')", "variable": "x", "domain": "real", "substitutions": [], "precision": 0 },
-        "validResult": { "contractVersion": "1.1.0", "status": "exact", "operation": "derivative", "expression": "x^2", "value": "2*x", "domain": "real", "conditions": [] },
-        "error": { "contractVersion": "1.1.0", "code": "invalid_expression", "message": "A expressão não pertence à gramática matemática suportada.", "retryable": false }
+        "validInput": { "contractVersion": "1.2.0", "operation": "derivative", "expression": "x^2", "variable": "x", "domain": "real", "substitutions": [], "precision": 0 },
+        "invalidInput": { "contractVersion": "1.2.0", "operation": "execute_python", "expression": "__import__('os')", "variable": "x", "domain": "real", "substitutions": [], "precision": 0 },
+        "validResult": { "contractVersion": "1.2.0", "status": "exact", "operation": "derivative", "expression": "x^2", "value": "2*x", "domain": "real", "conditions": [] },
+        "error": { "contractVersion": "1.2.0", "code": "invalid_expression", "message": "A expressão não pertence à gramática matemática suportada.", "retryable": false }
       }
     },
     {
@@ -109,7 +109,7 @@
         "type": "object", "additionalProperties": false,
         "required": ["contractVersion", "amount", "sourceUnit", "targetUnit", "decimalPlaces"],
         "properties": {
-          "contractVersion": { "const": "1.1.0" },
+          "contractVersion": { "const": "1.2.0" },
           "amount": { "type": "string", "pattern": "^-?[0-9]+([.,][0-9]+)?$", "maxLength": 128 },
           "sourceUnit": { "type": "string", "minLength": 1, "maxLength": 64 },
           "targetUnit": { "type": "string", "minLength": 1, "maxLength": 64 },
@@ -122,7 +122,7 @@
         "type": "object", "additionalProperties": false,
         "required": ["contractVersion", "status", "originalAmount", "convertedAmount", "sourceUnit", "targetUnit", "precision"],
         "properties": {
-          "contractVersion": { "const": "1.1.0" },
+          "contractVersion": { "const": "1.2.0" },
           "status": { "enum": ["exact", "approximate", "unsupported", "insufficient_data"] },
           "originalAmount": { "type": "string", "maxLength": 128 },
           "convertedAmount": { "type": "string", "maxLength": 128 },
@@ -132,10 +132,206 @@
         }
       },
       "examples": {
-        "validInput": { "contractVersion": "1.1.0", "amount": "1.5", "sourceUnit": "km", "targetUnit": "m", "decimalPlaces": 2 },
-        "invalidInput": { "contractVersion": "1.1.0", "amount": "1.5", "sourceUnit": "kg", "targetUnit": "m", "decimalPlaces": -1 },
-        "validResult": { "contractVersion": "1.1.0", "status": "exact", "originalAmount": "1.5", "convertedAmount": "1500", "sourceUnit": "km", "targetUnit": "m", "precision": "exact" },
-        "error": { "contractVersion": "1.1.0", "code": "unit_mismatch", "message": "As unidades não têm dimensão compatível.", "retryable": false }
+        "validInput": { "contractVersion": "1.2.0", "amount": "1.5", "sourceUnit": "km", "targetUnit": "m", "decimalPlaces": 2 },
+        "invalidInput": { "contractVersion": "1.2.0", "amount": "1.5", "sourceUnit": "kg", "targetUnit": "m", "decimalPlaces": -1 },
+        "validResult": { "contractVersion": "1.2.0", "status": "exact", "originalAmount": "1.5", "convertedAmount": "1500", "sourceUnit": "km", "targetUnit": "m", "precision": "exact" },
+        "error": { "contractVersion": "1.2.0", "code": "unit_mismatch", "message": "As unidades não têm dimensão compatível.", "retryable": false }
+      }
+    },
+    {
+      "name": "calculation.addQuantities",
+      "sideEffects": false,
+      "description": "Add two recognized quantities only when their dimensions are compatible; preserve original and normalized exact values.",
+      "errorCodes": [
+        "invalid_request",
+        "unit_mismatch",
+        "unsupported_operation",
+        "limit_exceeded",
+        "unavailable",
+        "internal_error"
+      ],
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://sofiee-agent-calculation.local/contracts/v1/add-quantities.input.schema.json",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contractVersion",
+          "quantities"
+        ],
+        "properties": {
+          "contractVersion": {
+            "const": "1.2.0"
+          },
+          "quantities": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "amount",
+                "unit"
+              ],
+              "properties": {
+                "amount": {
+                  "type": "string",
+                  "pattern": "^-?(?:[0-9]+(?:[.,][0-9]+)?|[0-9]+/[1-9][0-9]*)$",
+                  "maxLength": 128
+                },
+                "unit": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              }
+            }
+          }
+        }
+      },
+      "resultSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://sofiee-agent-calculation.local/contracts/v1/add-quantities.result.schema.json",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contractVersion",
+          "status",
+          "originalQuantities",
+          "normalizedQuantities",
+          "sum",
+          "unit",
+          "precision"
+        ],
+        "properties": {
+          "contractVersion": {
+            "const": "1.2.0"
+          },
+          "status": {
+            "enum": [
+              "exact",
+              "unsupported"
+            ]
+          },
+          "originalQuantities": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "amount",
+                "unit"
+              ],
+              "properties": {
+                "amount": {
+                  "type": "string",
+                  "pattern": "^-?(?:[0-9]+(?:[.,][0-9]+)?|[0-9]+/[1-9][0-9]*)$",
+                  "maxLength": 128
+                },
+                "unit": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              }
+            }
+          },
+          "normalizedQuantities": {
+            "type": "array",
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "amount",
+                "unit"
+              ],
+              "properties": {
+                "amount": {
+                  "type": "string",
+                  "maxLength": 128
+                },
+                "unit": {
+                  "type": "string",
+                  "maxLength": 64
+                }
+              }
+            }
+          },
+          "sum": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "precision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        }
+      },
+      "examples": {
+        "validInput": {
+          "contractVersion": "1.2.0",
+          "quantities": [
+            {
+              "amount": "1",
+              "unit": "km"
+            },
+            {
+              "amount": "500",
+              "unit": "m"
+            }
+          ]
+        },
+        "invalidInput": {
+          "contractVersion": "1.2.0",
+          "quantities": [
+            {
+              "amount": "1",
+              "unit": "m"
+            }
+          ]
+        },
+        "validResult": {
+          "contractVersion": "1.2.0",
+          "status": "exact",
+          "originalQuantities": [
+            {
+              "amount": "1",
+              "unit": "km"
+            },
+            {
+              "amount": "500",
+              "unit": "m"
+            }
+          ],
+          "normalizedQuantities": [
+            {
+              "amount": "1",
+              "unit": "km"
+            },
+            {
+              "amount": "1/2",
+              "unit": "km"
+            }
+          ],
+          "sum": "3/2",
+          "unit": "km",
+          "precision": "Exact rational conversions; original quantities are retained."
+        },
+        "error": {
+          "contractVersion": "1.2.0",
+          "code": "unit_mismatch",
+          "message": "As grandezas têm dimensões incompatíveis.",
+          "retryable": false
+        }
       }
     }
   ]
