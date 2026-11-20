@@ -458,14 +458,19 @@ MAX_SYMBOLIC_DEGREE = 32
 MAX_SYMBOLIC_TERMS = 512
 MAX_SYMBOLIC_PRODUCTS = 8192
 MAX_SYMBOLIC_POWER = 10
+MAX_SYMBOLIC_DECIMAL_EXPONENT = 700
 
 
 def _bounded_symbolic_expression(expression: sp.Expr) -> bool:
     symbols = sorted(expression.free_symbols, key=lambda item: item.name)
     if len(symbols) > MAX_SYMBOLIC_VARIABLES:
         return False
+    if not symbols:
+        if not expression.is_Rational:
+            return False
+        return _bounded_fraction(Fraction(int(expression.p), int(expression.q)))
     try:
-        polynomial = sp.Poly(expression, *symbols, domain=sp.QQ) if symbols else sp.Poly(expression, domain=sp.QQ)
+        polynomial = sp.Poly(expression, *symbols, domain=sp.QQ)
     except (PolynomialError, TypeError, ValueError, ZeroDivisionError, OverflowError):
         return False
     if polynomial.total_degree() > MAX_SYMBOLIC_DEGREE or len(polynomial.terms()) > MAX_SYMBOLIC_TERMS:
@@ -497,6 +502,16 @@ def _parse_symbolic_polynomial(expression: str) -> sp.Expr | None:
             source = ast.get_source_segment(syntax, node)
             if source is None or len(source.replace("_", "")) > 128:
                 return None
+            if re.search(r"[eE]", source):
+                exponent_match = re.search(r"[eE]([+-]?\d(?:_?\d)*)\Z", source)
+                if exponent_match is None:
+                    return None
+                try:
+                    exponent = int(exponent_match.group(1).replace("_", ""))
+                except ValueError:
+                    return None
+                if abs(exponent) > MAX_SYMBOLIC_DECIMAL_EXPONENT:
+                    return None
             try:
                 rational = Fraction(source)
             except (ValueError, ZeroDivisionError, OverflowError):

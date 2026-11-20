@@ -249,6 +249,27 @@ class CalculationTests(unittest.TestCase):
         too_many_variables = dict(request, expression="a + b + c + d + e + f + g")
         self.assertEqual(execute("calculation.symbolic", too_many_variables)["status"], "unsupported")
 
+        huge_positive_exponent = dict(request, expression="1e1000000000*x")
+        huge_negative_exponent = dict(request, expression="1e-1000000000*x")
+        self.assertEqual(execute("calculation.symbolic", huge_positive_exponent)["status"], "unsupported")
+        self.assertEqual(execute("calculation.symbolic", huge_negative_exponent)["status"], "unsupported")
+
+    def test_symbolic_parser_keeps_rational_constant_polynomials(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "operation": "simplify",
+            "expression": "2",
+            "variable": "x",
+            "domain": "real",
+            "substitutions": [],
+            "precision": 0,
+        }
+        for expression, expected in (("2", "2"), ("x-x", "0"), ("x^0", "1"), ("(2+3)*x", "5*x")):
+            with self.subTest(expression=expression):
+                result = execute("calculation.symbolic", dict(request, expression=expression))
+                self.assertEqual(result["status"], "exact")
+                self.assertEqual(result["value"], expected)
+
     def test_linear_solve_substitute_and_missing_limit_point(self):
         request = {
             "contractVersion": "1.2.0",
