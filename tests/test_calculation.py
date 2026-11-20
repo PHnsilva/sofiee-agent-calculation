@@ -11,9 +11,11 @@ class FakeModel:
     def __init__(self, response):
         self.response = response
         self.calls = 0
+        self.instruction = ""
 
     def generate_json(self, instruction, data, *, cancel_event=None):
         self.calls += 1
+        self.instruction = instruction
         return self.response
 
 
@@ -441,6 +443,9 @@ class CalculationTests(unittest.TestCase):
         parsed = parse_text_request("Resolva x^2 = 4 para x nos reais.", model=fake)
         self.assertEqual(parsed["status"], "ready")
         self.assertEqual(parsed["tool"], "calculation.solveEquation")
+        self.assertIn("return tool calculation.solveEquation", fake.instruction)
+        self.assertIn("grouping separators as decimals", fake.instruction)
+        self.assertNotIn("do not treat an explicit single-variable", fake.instruction)
         self.assertEqual(execute(parsed["tool"], parsed["input"])["value"], "x = -2; x = 2")
 
     def test_local_model_can_structure_explicit_system_solver_request(self):
