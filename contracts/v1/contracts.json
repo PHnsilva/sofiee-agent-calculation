@@ -99,6 +99,86 @@
       }
     },
     {
+      "name": "calculation.solveEquation",
+      "sideEffects": false,
+      "description": "Solve one bounded rational polynomial equation in a declared real variable, distinguish no solution and identity cases, and verify returned roots against the original equation.",
+      "errorCodes": ["invalid_request", "invalid_expression", "unsupported_operation", "domain_error", "insufficient_data", "limit_exceeded", "unavailable", "internal_error"],
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://sofiee-agent-calculation.local/contracts/v1/solve-equation.input.schema.json",
+        "type": "object", "additionalProperties": false,
+        "required": ["contractVersion", "equation", "variable", "domain"],
+        "properties": {
+          "contractVersion": { "const": "1.2.0" },
+          "equation": { "type": "string", "minLength": 1, "maxLength": 4000 },
+          "variable": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "domain": { "enum": ["real", "complex"] }
+        }
+      },
+      "resultSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://sofiee-agent-calculation.local/contracts/v1/solve-equation.result.schema.json",
+        "type": "object", "additionalProperties": false,
+        "required": ["contractVersion", "status", "equation", "variable", "domain", "value", "conditions", "solutionVerification"],
+        "properties": {
+          "contractVersion": { "const": "1.2.0" },
+          "status": { "enum": ["exact", "no_solution", "indeterminate", "insufficient_data", "unsupported"] },
+          "equation": { "type": "string", "maxLength": 4000 },
+          "variable": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "domain": { "enum": ["real", "complex"] },
+          "value": { "type": "string", "maxLength": 4000 },
+          "conditions": { "type": "array", "maxItems": 50, "items": { "type": "string", "maxLength": 500 } },
+          "solutionVerification": { "enum": ["verified", "not_checked"] }
+        }
+      },
+      "examples": {
+        "validInput": { "contractVersion": "1.2.0", "equation": "x^2 = 4", "variable": "x", "domain": "real" },
+        "invalidInput": { "contractVersion": "1.2.0", "equation": "x^2 = 4", "variable": "x", "domain": "real", "shell": "whoami" },
+        "validResult": { "contractVersion": "1.2.0", "status": "exact", "equation": "x^2 = 4", "variable": "x", "domain": "real", "value": "x = -2; x = 2", "conditions": [], "solutionVerification": "verified" },
+        "error": { "contractVersion": "1.2.0", "code": "invalid_expression", "message": "A equação não pertence à gramática polinomial suportada.", "retryable": false }
+      }
+    },
+    {
+      "name": "calculation.solveSystem",
+      "sideEffects": false,
+      "description": "Solve a bounded system of linear rational equations over the declared real variables, distinguish inconsistent and underdetermined systems, and verify returned assignments against every original equation.",
+      "errorCodes": ["invalid_request", "invalid_expression", "unsupported_operation", "domain_error", "insufficient_data", "limit_exceeded", "unavailable", "internal_error"],
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://sofiee-agent-calculation.local/contracts/v1/solve-system.input.schema.json",
+        "type": "object", "additionalProperties": false,
+        "required": ["contractVersion", "equations", "variables", "domain"],
+        "properties": {
+          "contractVersion": { "const": "1.2.0" },
+          "equations": { "type": "array", "minItems": 1, "maxItems": 12, "items": { "type": "string", "minLength": 3, "maxLength": 4000 } },
+          "variables": { "type": "array", "minItems": 1, "maxItems": 6, "items": { "type": "string", "minLength": 1, "maxLength": 64 } },
+          "domain": { "enum": ["real", "complex"] }
+        }
+      },
+      "resultSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://sofiee-agent-calculation.local/contracts/v1/solve-system.result.schema.json",
+        "type": "object", "additionalProperties": false,
+        "required": ["contractVersion", "status", "equations", "variables", "domain", "value", "conditions", "solutionVerification"],
+        "properties": {
+          "contractVersion": { "const": "1.2.0" },
+          "status": { "enum": ["exact", "no_solution", "indeterminate", "insufficient_data", "unsupported"] },
+          "equations": { "type": "array", "minItems": 1, "maxItems": 12, "items": { "type": "string", "minLength": 3, "maxLength": 4000 } },
+          "variables": { "type": "array", "minItems": 1, "maxItems": 6, "items": { "type": "string", "minLength": 1, "maxLength": 64 } },
+          "domain": { "enum": ["real", "complex"] },
+          "value": { "type": "string", "maxLength": 4000 },
+          "conditions": { "type": "array", "maxItems": 50, "items": { "type": "string", "maxLength": 500 } },
+          "solutionVerification": { "enum": ["verified", "not_checked"] }
+        }
+      },
+      "examples": {
+        "validInput": { "contractVersion": "1.2.0", "equations": ["x + y = 5", "x - y = 1"], "variables": ["x", "y"], "domain": "real" },
+        "invalidInput": { "contractVersion": "1.2.0", "equations": ["x + y = 5"], "variables": ["x", "y"], "domain": "real", "shell": "whoami" },
+        "validResult": { "contractVersion": "1.2.0", "status": "exact", "equations": ["x + y = 5", "x - y = 1"], "variables": ["x", "y"], "domain": "real", "value": "x = 3; y = 2", "conditions": [], "solutionVerification": "verified" },
+        "error": { "contractVersion": "1.2.0", "code": "invalid_expression", "message": "Uma ou mais equações não pertencem à gramática linear suportada.", "retryable": false }
+      }
+    },
+    {
       "name": "calculation.convertUnits",
       "sideEffects": false,
       "description": "Convert a numeric quantity only when source and target units are recognized and dimensionally compatible.",
