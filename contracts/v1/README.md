@@ -26,3 +26,5 @@ Cada ferramenta inclui exemplos válidos/inválidos, resultado e erro. O runtime
 ## Evolução
 
 Versões incompatíveis exigem migração explícita. A implementação futura precisa validar os schemas no runtime Python/SDK escolhido, restringir e testar a gramática das expressões, comparar contas com resultados determinísticos, e declarar tolerâncias e limites observados.
+
+As tarefas internas do CLI são descritas em `docs/INTERNAL_COORDINATION.md`. Elas referenciam ferramentas existentes e mantêm os schemas MCP públicos v1.2.0 inalterados.

@@ -11,6 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "contracts" / "v1" / "contracts.json"
+TASK_CONTRACT = ROOT / "contracts" / "v1" / "task.schema.json"
+TASK_RESULT_CONTRACT = ROOT / "contracts" / "v1" / "task-result.schema.json"
 
 
 def matches(value, schema):
@@ -95,7 +97,15 @@ def main():
             result = matches(tool["examples"][key], schema)
             assert result == (key != "invalidInput"), f"{tool['name']}:{key} fixture mismatch"
             checked += 1
-    print(f"contract-fixtures: {checked} checked; tools: {len(tools)}; version: {contract['contractVersion']}")
+    task_schema = json.loads(TASK_CONTRACT.read_text(encoding="utf-8"))
+    task_result_schema = json.loads(TASK_RESULT_CONTRACT.read_text(encoding="utf-8"))
+    for key, schema in (("validInput", task_schema), ("invalidInput", task_schema), ("validResult", task_result_schema), ("invalidResult", task_result_schema)):
+        expected = key not in {"invalidInput", "invalidResult"}
+        assert matches(schema["examples"][key], schema) == expected, f"task:{key} fixture mismatch"
+        checked += 1
+    assert task_schema["properties"]["contractVersion"]["const"] == contract["contractVersion"]
+    assert task_result_schema["properties"]["contractVersion"]["const"] == contract["contractVersion"]
+    print(f"contract-fixtures: {checked} checked; tools: {len(tools)}; task schemas: 2; version: {contract['contractVersion']}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sofiee-agent-calculation.local/contracts/v1/task.result.schema.json",
+  "title": "Cálculo — resultado de tarefa interna v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contractVersion", "taskId", "objective", "status", "executed", "stages", "missingDependencies", "missingInputs", "limits", "delegation", "checkpoint"],
+  "properties": {
+    "contractVersion": { "const": "1.2.0" },
+    "taskId": { "type": "string", "pattern": "^[0-9a-fA-F-]{36}$" },
+    "objective": { "type": "string", "minLength": 5, "maxLength": 2000 },
+    "status": { "enum": ["completed", "blocked", "failed", "partial", "cancelled", "timed_out", "needs_input"] },
+    "executed": { "type": "boolean" },
+    "stages": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "tool", "status", "mode", "attempts"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,39}$" },
+          "tool": { "enum": ["calculation.evaluate", "calculation.symbolic", "calculation.solveEquation", "calculation.solveSystem", "calculation.convertUnits", "calculation.addQuantities"] },
+          "status": { "enum": ["completed", "blocked", "failed", "cancelled", "timed_out", "needs_input"] },
+          "mode": { "enum": ["deterministic", "simulated", "checkpoint_recomputed"] },
+          "attempts": { "type": "integer", "minimum": 0, "maximum": 2 },
+          "result": { "type": "object" },
+          "error": { "type": "object" },
+          "blockedBy": { "type": "array", "maxItems": 7, "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,39}$" } }
+        }
+      }
+    },
+    "missingDependencies": { "type": "array", "maxItems": 8, "items": { "type": "string", "minLength": 1, "maxLength": 300 } },
+    "missingInputs": { "type": "array", "maxItems": 40, "items": { "type": "string", "minLength": 1, "maxLength": 500 } },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxSteps", "timeoutMs", "maxAttempts", "maxConcurrency", "maxDelegationDepth", "maxOutputBytes"],
+      "properties": {
+        "maxSteps": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "timeoutMs": { "type": "integer", "minimum": 1, "maximum": 60000 },
+        "maxAttempts": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "maxConcurrency": { "const": 1 },
+        "maxDelegationDepth": { "const": 0 },
+        "maxOutputBytes": { "type": "integer", "minimum": 1024, "maximum": 256000 }
+      }
+    },
+    "delegation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["depthUsed", "subagents", "reason"],
+      "properties": {
+        "depthUsed": { "const": 0 },
+        "subagents": { "const": 0 },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contractVersion", "taskId", "objectiveDigest", "completedStages"],
+      "properties": {
+        "contractVersion": { "const": "1.2.0" },
+        "taskId": { "type": "string", "pattern": "^[0-9a-fA-F-]{36}$" },
+        "objectiveDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "completedStages": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "tool", "stageDigest", "resultDigest"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,39}$" },
+              "tool": { "enum": ["calculation.evaluate", "calculation.symbolic", "calculation.solveEquation", "calculation.solveSystem", "calculation.convertUnits", "calculation.addQuantities"] },
+              "stageDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "resultDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "examples": {
+    "validResult": {
+      "contractVersion": "1.2.0",
+      "taskId": "10000000-0000-4000-8000-000000000001",
+      "objective": "Somar dois valores",
+      "status": "completed",
+      "executed": true,
+      "stages": [
+        { "id": "sum", "tool": "calculation.evaluate", "status": "completed", "mode": "deterministic", "attempts": 1, "result": { "contractVersion": "1.2.0", "status": "exact", "operation": "add", "value": "5", "unit": "", "method": "exact decimal arithmetic", "assumptions": [], "errorBound": "0" } }
+      ],
+      "missingDependencies": [],
+      "missingInputs": [],
+      "limits": { "maxSteps": 8, "timeoutMs": 60000, "maxAttempts": 1, "maxConcurrency": 1, "maxDelegationDepth": 0, "maxOutputBytes": 256000 },
+      "delegation": { "depthUsed": 0, "subagents": 0, "reason": "Ferramentas determinísticas locais." },
+      "checkpoint": {
+        "contractVersion": "1.2.0",
+        "taskId": "10000000-0000-4000-8000-000000000001",
+        "objectiveDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "completedStages": [
+          { "id": "sum", "tool": "calculation.evaluate", "stageDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "resultDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" }
+        ]
+      }
+    },
+    "invalidResult": {
+      "contractVersion": "1.2.0",
+      "taskId": "not-a-task-id",
+      "objective": "Somar dois valores",
+      "status": "completed",
+      "executed": true,
+      "stages": [],
+      "missingDependencies": [],
+      "missingInputs": [],
+      "limits": { "maxSteps": 8, "timeoutMs": 60000, "maxAttempts": 1, "maxConcurrency": 1, "maxDelegationDepth": 0, "maxOutputBytes": 256000 },
+      "delegation": { "depthUsed": 0, "subagents": 0, "reason": "Ferramentas determinísticas locais." },
+      "checkpoint": { "contractVersion": "1.2.0", "taskId": "not-a-task-id", "objectiveDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "completedStages": [] }
+    }
+  }
+}

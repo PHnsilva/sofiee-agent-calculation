@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from agent_runtime import execute, execute_text_request
+from agent_runtime import execute, execute_text_request, run_task
 from agent_runtime.contracts import error_result
 
 
@@ -25,13 +25,15 @@ def main() -> int:
             result = execute(request["tool"], request["input"])
         elif set(request) == {"text"}:
             result = execute_text_request(request["text"])
+        elif set(request) == {"task"}:
+            result = run_task(request["task"])
         else:
             raise ValueError
     except (UnicodeDecodeError, json.JSONDecodeError, ValueError, TypeError):
-        print(json.dumps(error_result("invalid_request", "Expected JSON with either tool/input or text.")))
+        print(json.dumps(error_result("invalid_request", "Expected JSON with tool/input, text, or task.")))
         return 2
     print(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
-    return 0 if "code" not in result else 2
+    return 0 if "code" not in result and result.get("status") not in {"blocked", "failed", "partial", "cancelled", "timed_out", "needs_input"} else 2
 
 
 if __name__ == "__main__":

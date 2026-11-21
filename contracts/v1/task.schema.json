@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sofiee-agent-calculation.local/contracts/v1/task.input.schema.json",
+  "title": "Cálculo — tarefa interna v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contractVersion", "objective", "stages"],
+  "properties": {
+    "contractVersion": { "const": "1.2.0" },
+    "objective": { "type": "string", "minLength": 5, "maxLength": 2000 },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "tool", "input"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,39}$" },
+          "tool": { "enum": ["calculation.evaluate", "calculation.symbolic", "calculation.solveEquation", "calculation.solveSystem", "calculation.convertUnits", "calculation.addQuantities"] },
+          "input": { "type": "object" },
+          "dependsOn": { "type": "array", "maxItems": 7, "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,39}$" } }
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxSteps": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "timeoutMs": { "type": "integer", "minimum": 1, "maximum": 60000 },
+        "maxAttempts": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "maxConcurrency": { "const": 1 },
+        "maxDelegationDepth": { "const": 0 },
+        "maxOutputBytes": { "type": "integer", "minimum": 1024, "maximum": 256000 }
+      }
+    },
+    "resume": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contractVersion", "taskId", "objectiveDigest", "completedStages"],
+      "properties": {
+        "contractVersion": { "const": "1.2.0" },
+        "taskId": { "type": "string", "pattern": "^[0-9a-fA-F-]{36}$" },
+        "objectiveDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "completedStages": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "tool", "stageDigest", "resultDigest"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,39}$" },
+              "tool": { "enum": ["calculation.evaluate", "calculation.symbolic", "calculation.solveEquation", "calculation.solveSystem", "calculation.convertUnits", "calculation.addQuantities"] },
+              "stageDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "resultDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "examples": {
+    "validInput": {
+      "contractVersion": "1.2.0",
+      "objective": "Somar dois valores e multiplicar o resultado",
+      "stages": [
+        { "id": "sum", "tool": "calculation.evaluate", "input": { "contractVersion": "1.2.0", "operation": "add", "operands": ["2", "3"], "domain": "real", "precision": { "mode": "exact", "decimalPlaces": 0 } } },
+        { "id": "scale", "tool": "calculation.evaluate", "dependsOn": ["sum"], "input": { "contractVersion": "1.2.0", "operation": "multiply", "operands": [{ "$resultFrom": "sum", "field": "value" }, "4"], "domain": "real", "precision": { "mode": "exact", "decimalPlaces": 0 } } }
+      ]
+    },
+    "invalidInput": {
+      "contractVersion": "1.2.0",
+      "objective": "Invalid graph",
+      "stages": []
+    }
+  }
+}
