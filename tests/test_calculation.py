@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from agent_runtime.calculation import execute, execute_text_request, parse_text_request
 from agent_runtime.local_model import LocalModel, ModelCallError
@@ -192,6 +193,128 @@ class CalculationTests(unittest.TestCase):
         self.assertEqual(execute("calculation.symbolic", request)["value"], "2*x + 3")
         integral = dict(request, operation="integral")
         self.assertEqual(execute("calculation.symbolic", integral)["value"], "1/3*x^3 + 3/2*x^2 + x + C")
+
+    def test_multivariate_simplification_canonicalizes_equivalent_polynomials(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "operation": "simplify",
+            "expression": "(x + y)^2",
+            "variable": "x",
+            "domain": "real",
+            "substitutions": [],
+            "precision": 0,
+        }
+        expanded = execute("calculation.symbolic", request)
+        equivalent = execute(
+            "calculation.symbolic",
+            dict(request, expression="x^2 + 2*y*x + y^2"),
+        )
+
+        self.assertEqual(expanded["status"], "exact")
+        self.assertEqual(expanded["value"], "x^2 + 2*x*y + y^2")
+        self.assertEqual(expanded["value"], equivalent["value"])
+
+    def test_substitution_requires_values_for_every_expression_variable(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "operation": "substitute",
+            "expression": "x*y + 2*x",
+            "variable": "x",
+            "domain": "real",
+            "substitutions": [{"name": "x", "value": "3"}],
+            "precision": 0,
+        }
+        incomplete = execute("calculation.symbolic", request)
+        self.assertEqual(incomplete["status"], "insufficient_data")
+        self.assertIn("y", incomplete["conditions"][0])
+
+        complete = execute(
+            "calculation.symbolic",
+            dict(request, substitutions=[{"name": "x", "value": "3"}, {"name": "y", "value": "4"}]),
+        )
+        self.assertEqual(complete["status"], "exact")
+        self.assertEqual(complete["value"], "18")
+
+    def test_symbolic_parser_fails_closed_on_extra_names_and_large_powers(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "operation": "simplify",
+            "expression": "x^11",
+            "variable": "x",
+            "domain": "real",
+            "substitutions": [],
+            "precision": 0,
+        }
+        self.assertEqual(execute("calculation.symbolic", request)["status"], "unsupported")
+
+        too_many_variables = dict(request, expression="a + b + c + d + e + f + g")
+        self.assertEqual(execute("calculation.symbolic", too_many_variables)["status"], "unsupported")
+
+        huge_positive_exponent = dict(request, expression="1e1000000000*x")
+        huge_negative_exponent = dict(request, expression="1e-1000000000*x")
+        self.assertEqual(execute("calculation.symbolic", huge_positive_exponent)["status"], "unsupported")
+        self.assertEqual(execute("calculation.symbolic", huge_negative_exponent)["status"], "unsupported")
+
+    def test_symbolic_parser_keeps_rational_constant_polynomials(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "operation": "simplify",
+            "expression": "2",
+            "variable": "x",
+            "domain": "real",
+            "substitutions": [],
+            "precision": 0,
+        }
+        for expression, expected in (("2", "2"), ("x-x", "0"), ("x^0", "1"), ("(2+3)*x", "5*x")):
+            with self.subTest(expression=expression):
+                result = execute("calculation.symbolic", dict(request, expression=expression))
+                self.assertEqual(result["status"], "exact")
+                self.assertEqual(result["value"], expected)
+
+    def test_scientific_exponents_are_bounded_before_fraction_expansion(self):
+        for expression in ("1e1000000000*x", "1e-1000000000*x", "1e617*x", "1e-617*x"):
+            with self.subTest(expression=expression), patch(
+                "agent_runtime.calculation.Fraction",
+                side_effect=AssertionError("an over-bound exponent must be rejected before Fraction construction"),
+            ):
+                result = execute(
+                    "calculation.symbolic",
+                    {
+                        "contractVersion": "1.2.0",
+                        "operation": "simplify",
+                        "expression": expression,
+                        "variable": "x",
+                        "domain": "real",
+                        "substitutions": [],
+                        "precision": 0,
+                    },
+                )
+                self.assertEqual(result["status"], "unsupported")
+
+    def test_substitution_keeps_variables_that_cancel_during_simplification(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "operation": "substitute",
+            "expression": "x-x",
+            "variable": "x",
+            "domain": "real",
+            "substitutions": [{"name": "x", "value": "3"}],
+            "precision": 0,
+        }
+        result = execute("calculation.symbolic", request)
+        self.assertEqual(result["status"], "exact")
+        self.assertEqual(result["value"], "0")
+
+        combined = dict(
+            request,
+            expression="x-x+y",
+            substitutions=[{"name": "x", "value": "3"}, {"name": "y", "value": "4"}],
+        )
+        self.assertEqual(execute("calculation.symbolic", combined)["value"], "4")
+        missing_cancelled_name = dict(request, expression="x-x+y", substitutions=[{"name": "y", "value": "4"}])
+        incomplete = execute("calculation.symbolic", missing_cancelled_name)
+        self.assertEqual(incomplete["status"], "insufficient_data")
+        self.assertIn("x", incomplete["conditions"][0])
 
     def test_linear_solve_substitute_and_missing_limit_point(self):
         request = {

@@ -59,7 +59,7 @@
     {
       "name": "calculation.symbolic",
       "sideEffects": false,
-      "description": "Request a supported symbolic operation over mathematical text, not executable code.",
+      "description": "Simplify or substitute bounded rational polynomial expressions, or request another explicitly supported symbolic operation; the expression is mathematical text, not executable code.",
       "errorCodes": ["invalid_request", "invalid_expression", "unsupported_operation", "domain_error", "insufficient_data", "limit_exceeded", "unavailable", "internal_error"],
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -92,9 +92,9 @@
         }
       },
       "examples": {
-        "validInput": { "contractVersion": "1.2.0", "operation": "derivative", "expression": "x^2", "variable": "x", "domain": "real", "substitutions": [], "precision": 0 },
+        "validInput": { "contractVersion": "1.2.0", "operation": "simplify", "expression": "(x + y)^2", "variable": "x", "domain": "real", "substitutions": [], "precision": 0 },
         "invalidInput": { "contractVersion": "1.2.0", "operation": "execute_python", "expression": "__import__('os')", "variable": "x", "domain": "real", "substitutions": [], "precision": 0 },
-        "validResult": { "contractVersion": "1.2.0", "status": "exact", "operation": "derivative", "expression": "x^2", "value": "2*x", "domain": "real", "conditions": [] },
+        "validResult": { "contractVersion": "1.2.0", "status": "exact", "operation": "simplify", "expression": "(x + y)^2", "value": "x^2 + 2*x*y + y^2", "domain": "real", "conditions": [] },
         "error": { "contractVersion": "1.2.0", "code": "invalid_expression", "message": "A expressão não pertence à gramática matemática suportada.", "retryable": false }
       }
     },

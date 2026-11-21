@@ -42,12 +42,24 @@ async def discover_and_call():
                 ],
             },
         )
-        return names, tools, result, quantity_result
+        symbolic_result = await client.call_tool(
+            "calculation.symbolic",
+            {
+                "contractVersion": CONTRACT["contractVersion"],
+                "operation": "substitute",
+                "expression": "x*y + 2*x",
+                "variable": "x",
+                "domain": "real",
+                "substitutions": [{"name": "x", "value": "3"}, {"name": "y", "value": "4"}],
+                "precision": 0,
+            },
+        )
+        return names, tools, result, quantity_result, symbolic_result
 
 
 class McpTransportTests(unittest.TestCase):
     def test_real_client_discovers_contract_tools_and_calls_domain_operation(self):
-        names, tools, result, quantity_result = asyncio.run(discover_and_call())
+        names, tools, result, quantity_result, symbolic_result = asyncio.run(discover_and_call())
         self.assertSetEqual(names, EXPECTED_NAMES)
         self.assertEqual(
             tools[TEST_TOOL].input_schema["$id"],
@@ -61,6 +73,9 @@ class McpTransportTests(unittest.TestCase):
         self.assertFalse(quantity_result.is_error)
         self.assertEqual(quantity_result.structured_content.get("sum"), "3/2")
         self.assertEqual(quantity_result.structured_content.get("unit"), "km")
+        self.assertFalse(symbolic_result.is_error)
+        self.assertEqual(symbolic_result.structured_content.get("status"), "exact")
+        self.assertEqual(symbolic_result.structured_content.get("value"), "18")
 
 
 if __name__ == "__main__":
