@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from agent_runtime.calculation import execute, execute_text_request, parse_text_request
 from agent_runtime.local_model import LocalModel, ModelCallError
@@ -271,6 +272,51 @@ class CalculationTests(unittest.TestCase):
                 result = execute("calculation.symbolic", dict(request, expression=expression))
                 self.assertEqual(result["status"], "exact")
                 self.assertEqual(result["value"], expected)
+
+    def test_scientific_exponents_are_bounded_before_fraction_expansion(self):
+        for expression in ("1e1000000000*x", "1e-1000000000*x", "1e617*x", "1e-617*x"):
+            with self.subTest(expression=expression), patch(
+                "agent_runtime.calculation.Fraction",
+                side_effect=AssertionError("an over-bound exponent must be rejected before Fraction construction"),
+            ):
+                result = execute(
+                    "calculation.symbolic",
+                    {
+                        "contractVersion": "1.2.0",
+                        "operation": "simplify",
+                        "expression": expression,
+                        "variable": "x",
+                        "domain": "real",
+                        "substitutions": [],
+                        "precision": 0,
+                    },
+                )
+                self.assertEqual(result["status"], "unsupported")
+
+    def test_substitution_keeps_variables_that_cancel_during_simplification(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "operation": "substitute",
+            "expression": "x-x",
+            "variable": "x",
+            "domain": "real",
+            "substitutions": [{"name": "x", "value": "3"}],
+            "precision": 0,
+        }
+        result = execute("calculation.symbolic", request)
+        self.assertEqual(result["status"], "exact")
+        self.assertEqual(result["value"], "0")
+
+        combined = dict(
+            request,
+            expression="x-x+y",
+            substitutions=[{"name": "x", "value": "3"}, {"name": "y", "value": "4"}],
+        )
+        self.assertEqual(execute("calculation.symbolic", combined)["value"], "4")
+        missing_cancelled_name = dict(request, expression="x-x+y", substitutions=[{"name": "y", "value": "4"}])
+        incomplete = execute("calculation.symbolic", missing_cancelled_name)
+        self.assertEqual(incomplete["status"], "insufficient_data")
+        self.assertIn("x", incomplete["conditions"][0])
 
     def test_linear_solve_substitute_and_missing_limit_point(self):
         request = {

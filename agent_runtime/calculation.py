@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import math
 import os
 import re
 from decimal import Decimal, ROUND_HALF_EVEN, localcontext
@@ -53,8 +54,11 @@ def _fraction_text(value: Fraction) -> str:
     return str(value.numerator) if value.denominator == 1 else f"{value.numerator}/{value.denominator}"
 
 
+MAX_FRACTION_BITS = 2048
+
+
 def _bounded_fraction(value: Fraction) -> bool:
-    return value.numerator.bit_length() <= 2048 and value.denominator.bit_length() <= 2048
+    return value.numerator.bit_length() <= MAX_FRACTION_BITS and value.denominator.bit_length() <= MAX_FRACTION_BITS
 
 
 def _simple_percentage_request(text: str) -> dict[str, Any] | None:
@@ -461,6 +465,43 @@ MAX_SYMBOLIC_POWER = 10
 MAX_SYMBOLIC_DECIMAL_EXPONENT = 700
 
 
+def _scientific_fraction_is_bounded(source: str) -> bool:
+    normalized = source.replace("_", "")
+    match = re.fullmatch(r"(?P<mantissa>(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+))[eE](?P<exponent>[+-]?[0-9]+)", normalized)
+    if match is None:
+        return False
+    try:
+        exponent = int(match.group("exponent"))
+    except ValueError:
+        return False
+    if abs(exponent) > MAX_SYMBOLIC_DECIMAL_EXPONENT:
+        return False
+
+    mantissa = match.group("mantissa")
+    integer, _, fractional = mantissa.partition(".")
+    digits = (integer + fractional).lstrip("0")
+    if not digits:
+        return True
+    coefficient = int(digits)
+    trailing_zeros = len(digits) - len(digits.rstrip("0"))
+    if trailing_zeros:
+        coefficient //= 10**trailing_zeros
+    decimal_shift = exponent - len(fractional)
+    decimal_shift += trailing_zeros
+    if decimal_shift >= 0:
+        numerator = coefficient * 10**decimal_shift
+        denominator = 1
+    else:
+        denominator = 10 ** (-decimal_shift)
+        common = math.gcd(coefficient, denominator)
+        numerator = coefficient // common
+        denominator //= common
+
+    # Exponents are capped before powers are built; exact reduced bit lengths
+    # are checked before Fraction can construct the submitted value.
+    return numerator.bit_length() <= MAX_FRACTION_BITS and denominator.bit_length() <= MAX_FRACTION_BITS
+
+
 def _bounded_symbolic_expression(expression: sp.Expr) -> bool:
     symbols = sorted(expression.free_symbols, key=lambda item: item.name)
     if len(symbols) > MAX_SYMBOLIC_VARIABLES:
@@ -482,7 +523,7 @@ def _bounded_symbolic_expression(expression: sp.Expr) -> bool:
     return True
 
 
-def _parse_symbolic_polynomial(expression: str) -> sp.Expr | None:
+def _parse_symbolic_polynomial(expression: str) -> tuple[sp.Expr, frozenset[str]] | None:
     """Build a bounded rational polynomial from a syntax whitelist, without eval-based parsing."""
     if len(expression) > 4000:
         return None
@@ -503,14 +544,7 @@ def _parse_symbolic_polynomial(expression: str) -> sp.Expr | None:
             if source is None or len(source.replace("_", "")) > 128:
                 return None
             if re.search(r"[eE]", source):
-                exponent_match = re.search(r"[eE]([+-]?\d(?:_?\d)*)\Z", source)
-                if exponent_match is None:
-                    return None
-                try:
-                    exponent = int(exponent_match.group(1).replace("_", ""))
-                except ValueError:
-                    return None
-                if abs(exponent) > MAX_SYMBOLIC_DECIMAL_EXPONENT:
+                if not _scientific_fraction_is_bounded(source):
                     return None
             try:
                 rational = Fraction(source)
@@ -562,7 +596,9 @@ def _parse_symbolic_polynomial(expression: str) -> sp.Expr | None:
 
     try:
         result = parse(tree.body)
-        return sp.expand(result) if result is not None and _bounded_symbolic_expression(result) else None
+        if result is None or not _bounded_symbolic_expression(result):
+            return None
+        return sp.expand(result), frozenset(variables)
     except (ArithmeticError, PolynomialError, RecursionError, TypeError, ValueError, OverflowError):
         return None
 
@@ -572,14 +608,15 @@ def _symbolic_expression_text(expression: sp.Expr) -> str:
 
 
 def _simplify_or_substitute(payload: dict[str, Any]) -> dict[str, Any]:
-    expression = _parse_symbolic_polynomial(payload["expression"])
-    if expression is None:
+    parsed = _parse_symbolic_polynomial(payload["expression"])
+    if parsed is None:
         return _symbolic_result(
             payload,
             "unsupported",
             "",
             ["Only bounded rational polynomials over at most six variables are supported."],
         )
+    expression, source_variables = parsed
 
     if payload["operation"] == "simplify":
         value = _symbolic_expression_text(expression)
@@ -590,7 +627,7 @@ def _simplify_or_substitute(payload: dict[str, Any]) -> dict[str, Any]:
             if name in supplied:
                 return _symbolic_result(payload, "ambiguous", "", [f"More than one value was supplied for {name}."])
             supplied[name] = _fraction(item["value"])
-        required = {symbol.name for symbol in expression.free_symbols}
+        required = set(source_variables)
         extra = sorted(set(supplied) - required)
         if extra:
             return _symbolic_result(
