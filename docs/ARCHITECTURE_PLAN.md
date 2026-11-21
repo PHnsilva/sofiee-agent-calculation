@@ -19,3 +19,7 @@ Referência para organização de especialidades: https://learn.chatgpt.com/docs
 Direção dos quatro agentes novos: módulos de domínio com schemas fechados e servidor MCP interno usando SDK oficial, preferindo runtime Python compatível com ferramentas selecionadas. Exceção para tecnologia precisa demonstrar necessidade na issue, sem mudar os contratos. Referência: https://github.com/modelcontextprotocol/python-sdk . Não instalar versões por antecipação neste planejamento.
 
 Execução semanal: ler [WEEKLY_EXECUTION.md](WEEKLY_EXECUTION.md). Espera de revisão/merge não deve impedir PRs dependentes sobre artefatos já disponíveis e tecnicamente validados, com base/ordem explícitas.
+
+## Coordenação no runtime
+
+O CLI pode executar tarefas seriais com ferramentas de Cálculo existentes. As dependências passam apenas valores numéricos validados; domínio e unidade precisam coincidir e conversões exigem etapa explícita. Limites, estados e checkpoint seguem [INTERNAL_COORDINATION.md](INTERNAL_COORDINATION.md); o servidor MCP e os contratos de ferramenta v1 permanecem sem alteração nesta entrega.
