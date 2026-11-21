@@ -12,9 +12,11 @@ class FakeModel:
     def __init__(self, response):
         self.response = response
         self.calls = 0
+        self.instruction = ""
 
     def generate_json(self, instruction, data, *, cancel_event=None):
         self.calls += 1
+        self.instruction = instruction
         return self.response
 
 
@@ -332,6 +334,76 @@ class CalculationTests(unittest.TestCase):
         limit = dict(request, operation="limit")
         self.assertEqual(execute("calculation.symbolic", limit)["status"], "insufficient_data")
 
+    def test_quadratic_equation_returns_all_verified_real_roots(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "equation": "x^2 = 4",
+            "variable": "x",
+            "domain": "real",
+        }
+        result = execute("calculation.solveEquation", request)
+        self.assertEqual(result["status"], "exact")
+        self.assertEqual(result["value"], "x = -2; x = 2")
+        self.assertEqual(result["solutionVerification"], "verified")
+
+    def test_real_equation_distinguishes_no_solution_and_identity(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "equation": "x^2 + 1 = 0",
+            "variable": "x",
+            "domain": "real",
+        }
+        self.assertEqual(execute("calculation.solveEquation", request)["status"], "no_solution")
+        identity = execute("calculation.solveEquation", dict(request, equation="x = x"))
+        self.assertEqual(identity["status"], "indeterminate")
+        self.assertEqual(identity["solutionVerification"], "verified")
+        complex_domain = execute("calculation.solveEquation", dict(request, equation="x^2 = 4", domain="complex"))
+        self.assertEqual(complex_domain["status"], "unsupported")
+
+    def test_equation_solver_rejects_polynomial_above_degree_limit(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "equation": "x^5 = 1",
+            "variable": "x",
+            "domain": "real",
+        }
+        self.assertEqual(execute("calculation.solveEquation", request)["status"], "unsupported")
+
+    def test_linear_system_returns_and_verifies_exact_assignment(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "equations": ["x + y = 5", "x - y = 1"],
+            "variables": ["x", "y"],
+            "domain": "real",
+        }
+        result = execute("calculation.solveSystem", request)
+        self.assertEqual(result["status"], "exact")
+        self.assertEqual(result["value"], "x = 3; y = 2")
+        self.assertEqual(result["solutionVerification"], "verified")
+
+    def test_linear_system_distinguishes_inconsistent_and_underdetermined(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "equations": ["x + y = 1", "x + y = 2"],
+            "variables": ["x", "y"],
+            "domain": "real",
+        }
+        self.assertEqual(execute("calculation.solveSystem", request)["status"], "no_solution")
+        underdetermined = execute("calculation.solveSystem", dict(request, equations=["x + y = 1"]))
+        self.assertEqual(underdetermined["status"], "indeterminate")
+        self.assertEqual(underdetermined["solutionVerification"], "verified")
+
+    def test_linear_system_requires_declared_variables_and_rejects_nonlinear_forms(self):
+        request = {
+            "contractVersion": "1.2.0",
+            "equations": ["x + z = 1"],
+            "variables": ["x", "y"],
+            "domain": "real",
+        }
+        self.assertEqual(execute("calculation.solveSystem", request)["status"], "insufficient_data")
+        nonlinear = execute("calculation.solveSystem", dict(request, equations=["x*y = 1"], variables=["x", "y"]))
+        self.assertEqual(nonlinear["status"], "unsupported")
+
     def test_unsafe_or_unsupported_symbolic_expression_fails_closed(self):
         request = {
             "contractVersion": "1.2.0",
@@ -400,6 +472,45 @@ class CalculationTests(unittest.TestCase):
         self.assertEqual(fake.calls, 1)
         self.assertEqual(result["status"], "executed")
         self.assertEqual(result["result"]["value"], "32")
+
+    def test_local_model_can_structure_explicit_equation_solver_request(self):
+        fake = FakeModel(
+            {
+                "status": "ready",
+                "tool": "calculation.solveEquation",
+                "input": {
+                    "contractVersion": "1.2.0",
+                    "equation": "x^2 = 4",
+                    "variable": "x",
+                    "domain": "real",
+                },
+            }
+        )
+        parsed = parse_text_request("Resolva x^2 = 4 para x nos reais.", model=fake)
+        self.assertEqual(parsed["status"], "ready")
+        self.assertEqual(parsed["tool"], "calculation.solveEquation")
+        self.assertIn("return tool calculation.solveEquation", fake.instruction)
+        self.assertIn("grouping separators as decimals", fake.instruction)
+        self.assertNotIn("do not treat an explicit single-variable", fake.instruction)
+        self.assertEqual(execute(parsed["tool"], parsed["input"])["value"], "x = -2; x = 2")
+
+    def test_local_model_can_structure_explicit_system_solver_request(self):
+        fake = FakeModel(
+            {
+                "status": "ready",
+                "tool": "calculation.solveSystem",
+                "input": {
+                    "contractVersion": "1.2.0",
+                    "equations": ["x + y = 5", "x - y = 1"],
+                    "variables": ["x", "y"],
+                    "domain": "real",
+                },
+            }
+        )
+        parsed = parse_text_request("Resolva x + y = 5 e x - y = 1 para x e y nos reais.", model=fake)
+        self.assertEqual(parsed["status"], "ready")
+        self.assertEqual(parsed["tool"], "calculation.solveSystem")
+        self.assertEqual(execute(parsed["tool"], parsed["input"])["value"], "x = 3; y = 2")
 
     def test_invalid_model_proposal_is_rejected_before_execution(self):
         fake = FakeModel(

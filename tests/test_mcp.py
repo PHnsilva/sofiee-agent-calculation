@@ -17,7 +17,7 @@ SERVER = StdioServerParameters(
     args=["-m", "agent_runtime.mcp_server"],
     cwd=ROOT,
 )
-EXPECTED_NAMES = {'calculation.evaluate', 'calculation.convertUnits', 'calculation.addQuantities', 'calculation.symbolic'}
+EXPECTED_NAMES = {'calculation.evaluate', 'calculation.convertUnits', 'calculation.addQuantities', 'calculation.symbolic', 'calculation.solveEquation', 'calculation.solveSystem'}
 TEST_TOOL = "calculation.evaluate"
 PAYLOAD = {'contractVersion': CONTRACT['contractVersion'],
  'operation': 'percentage_change',
@@ -54,12 +54,30 @@ async def discover_and_call():
                 "precision": 0,
             },
         )
-        return names, tools, result, quantity_result, symbolic_result
+        system_result = await client.call_tool(
+            "calculation.solveSystem",
+            {
+                "contractVersion": CONTRACT["contractVersion"],
+                "equations": ["x + y = 5", "x - y = 1"],
+                "variables": ["x", "y"],
+                "domain": "real",
+            },
+        )
+        equation_result = await client.call_tool(
+            "calculation.solveEquation",
+            {
+                "contractVersion": CONTRACT["contractVersion"],
+                "equation": "x^2 = 4",
+                "variable": "x",
+                "domain": "real",
+            },
+        )
+        return names, tools, result, quantity_result, symbolic_result, equation_result, system_result
 
 
 class McpTransportTests(unittest.TestCase):
     def test_real_client_discovers_contract_tools_and_calls_domain_operation(self):
-        names, tools, result, quantity_result, symbolic_result = asyncio.run(discover_and_call())
+        names, tools, result, quantity_result, symbolic_result, equation_result, system_result = asyncio.run(discover_and_call())
         self.assertSetEqual(names, EXPECTED_NAMES)
         self.assertEqual(
             tools[TEST_TOOL].input_schema["$id"],
@@ -76,6 +94,14 @@ class McpTransportTests(unittest.TestCase):
         self.assertFalse(symbolic_result.is_error)
         self.assertEqual(symbolic_result.structured_content.get("status"), "exact")
         self.assertEqual(symbolic_result.structured_content.get("value"), "18")
+        self.assertFalse(equation_result.is_error)
+        self.assertEqual(equation_result.structured_content.get("status"), "exact")
+        self.assertEqual(equation_result.structured_content.get("value"), "x = -2; x = 2")
+        self.assertEqual(equation_result.structured_content.get("solutionVerification"), "verified")
+        self.assertFalse(system_result.is_error)
+        self.assertEqual(system_result.structured_content.get("status"), "exact")
+        self.assertEqual(system_result.structured_content.get("value"), "x = 3; y = 2")
+        self.assertEqual(system_result.structured_content.get("solutionVerification"), "verified")
 
 
 if __name__ == "__main__":
