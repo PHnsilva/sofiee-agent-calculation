@@ -675,15 +675,17 @@ def _equation_difference(source: str, *, require_equality: bool = False) -> sp.E
     if "=" not in source:
         if require_equality:
             return None
-        expression = _parse_symbolic_polynomial(source)
-        return sp.expand(expression) if expression is not None else None
+        parsed = _parse_symbolic_polynomial(source)
+        return sp.expand(parsed[0]) if parsed is not None else None
     left_text, right_text = source.split("=", 1)
     if not left_text.strip() or not right_text.strip():
         return None
-    left = _parse_symbolic_polynomial(left_text.strip())
-    right = _parse_symbolic_polynomial(right_text.strip())
-    if left is None or right is None:
+    left_parsed = _parse_symbolic_polynomial(left_text.strip())
+    right_parsed = _parse_symbolic_polynomial(right_text.strip())
+    if left_parsed is None or right_parsed is None:
         return None
+    left = left_parsed[0]
+    right = right_parsed[0]
     difference = sp.expand(left - right)
     return difference if _bounded_symbolic_expression(difference) else None
 
